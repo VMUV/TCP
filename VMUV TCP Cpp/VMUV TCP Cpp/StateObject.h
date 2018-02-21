@@ -2,16 +2,14 @@
 
 #pragma once
 #include <vector>
-//#include <Afxsock.h>
-#include <winsock.h>
+#include <winsock2.h>
 
 using namespace std;
 
-#define byte unsigned char
 
 #include "Packetizer.h"
 
-//using System.Net.Sockets;
+#define STATE_BUFFER_SIZE 1024
 
 namespace VMUV_TCP_Cpp
 {
@@ -22,8 +20,8 @@ namespace VMUV_TCP_Cpp
 		virtual ~StateObject();
 
 		SOCKET workSocket;
-		const int BufferSize = 1024;
-		vector<byte> buffer;
+		const int BufferSize = STATE_BUFFER_SIZE;
+		vector<char> buffer;
 		Packetizer packetizer;
 	};
 }

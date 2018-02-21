@@ -1,33 +1,14 @@
 // SocketWrapper.cpp
 
-/////////////////////////////////////////////////////////////////////////////////
-// this is an early, incomplete checkin, in process of porting C# code to C++.
-//
-// original C# code is generaly commented out, indicated by //C# at the start of the line.
-//
-// there are 2 versions of the ported code present:
-// code using non-blocking multiple event methods is enclosed in #ifdef ASYNC_SOCKETS ... #else // not ASYNC_SOCKETS blocks
-// code using simple blocking calls is enclosed within #else // not ASYNC_SOCKETS ... #endif // ASYNC_SOCKETS blocks
-// I'm hoping we can get by with the later - but retained the former, having allready written it.
-//
-
 #include "stdafx.h"
 
+#include "StateObject.h"
 #include "SocketWrapper.h"
-
-//using System;
-//using System.Net;
-//using System.Net.Sockets;
-//using System.Security;
-//using Trace_Logger_CSharp;
 
 WSADATA wsaData;
 
 VMUV_TCP_Cpp::SocketWrapper::SocketWrapper()
 {
-//	packetizer = new Packetizer();
-//	traceLogger = new Trace_Logger_Cpp::TraceLogger();
-//	listener = null;
 	listener = INVALID_SOCKET;
 	txDataPing = { 0 };  // Do this incase Start() is called before the user sets any data
 	txDataPong = { 0 };  // Do this incase Start() is called before the user sets any data
@@ -47,9 +28,6 @@ VMUV_TCP_Cpp::SocketWrapper::SocketWrapper()
 VMUV_TCP_Cpp::SocketWrapper::SocketWrapper(Configuration configuration)
 {
 	config = configuration;
-//	packetizer = new Packetizer();
-//	traceLogger = new TraceLogger();
-//	listener = null;
 	listener = INVALID_SOCKET;
 	txDataPing = { 0 };  // Do this incase Start() is called before the user sets any data
 	txDataPong = { 0 };  // Do this incase Start() is called before the user sets any data
@@ -63,8 +41,6 @@ VMUV_TCP_Cpp::SocketWrapper::SocketWrapper(Configuration configuration)
 
 VMUV_TCP_Cpp::SocketWrapper::~SocketWrapper()
 {
-//	if (packetizer) delete packetizer;
-//	if (traceLogger) delete traceLogger;
 }
 
 /// <summary>
@@ -72,19 +48,19 @@ VMUV_TCP_Cpp::SocketWrapper::~SocketWrapper()
 /// </summary>
 /// <param name="payload"></param>
 /// <param name="type"></param>
-void VMUV_TCP_Cpp::SocketWrapper::ServerSetTxData(vector<byte> payload, byte type)
+void VMUV_TCP_Cpp::SocketWrapper::ServerSetTxData(vector<char> payload, char type)
 {
 	string methodName = "ServerSetTxData";
 	try
 	{
 		if (usePing)
 		{
-			txDataPing = packetizer.PacketizeData(payload, (byte)type);
+			txDataPing = packetizer.PacketizeData(payload, (char)type);
 			usePing = false;
 		}
 		else
 		{
-			txDataPong = packetizer.PacketizeData(payload, (byte)type);
+			txDataPong = packetizer.PacketizeData(payload, (char)type);
 			usePing = true;
 		}
 	}
@@ -100,8 +76,8 @@ void VMUV_TCP_Cpp::SocketWrapper::ServerSetTxData(vector<byte> payload, byte typ
 /// <summary>
 /// Acquires the most recently received valid data payload.
 /// </summary>
-/// <returns>byte buffer with a copy of the most recently receieved valid data payload.</returns>
-vector<byte> VMUV_TCP_Cpp::SocketWrapper::ClientGetRxData()
+/// <returns>char buffer with a copy of the most recently receieved valid data payload.</returns>
+vector<char> VMUV_TCP_Cpp::SocketWrapper::ClientGetRxData()
 {
 	if (usePing)
 		return rxDataPong;
@@ -112,8 +88,8 @@ vector<byte> VMUV_TCP_Cpp::SocketWrapper::ClientGetRxData()
 /// <summary>
 /// Acquires the most recently received payload type.
 /// </summary>
-/// <returns>byte with the most recent payload type. </returns>
-byte VMUV_TCP_Cpp::SocketWrapper::ClientGetRxType()
+/// <returns>char with the most recent payload type. </returns>
+char VMUV_TCP_Cpp::SocketWrapper::ClientGetRxType()
 {
 	if (usePing)
 		return rxTypePong;
@@ -145,8 +121,6 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 
 	try
 	{
-//C#		IPEndPoint localEP = new IPEndPoint(IPAddress.Loopback, port);
-
 		// the following from document msdn.microsoft.com ...> Using Winsock > Getting Started With Winsock
 		// initializa Winsock
 		int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -176,7 +150,6 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 
 		//-------------------------
 		// Create a listening socket
-//C#		listener = new SOCKET(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 		listener = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 
 		if (listener == INVALID_SOCKET) {
@@ -188,7 +161,6 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 
 		//-------------------------
 		// Bind the listening socket
-//C#		listener.Bind(localEP);
 		// Setup the TCP listening socket
 		iResult = bind(listener, result->ai_addr, (int)result->ai_addrlen);
 		if (iResult == SOCKET_ERROR) {
@@ -200,31 +172,8 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 		}
 		freeaddrinfo(result);
 
-#ifdef ASYNC_SOCKETS
-		//-------------------------
-		// Create a new event
-		NewEvent = WSACreateEvent();
-		if (NewEvent == NULL) {
-			sprintf_s(tmpstr, "WSACreateEvent failed with error: %d\n", GetLastError());
-			closesocket(listener);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
-		//-------------------------
-		// Associate event types FD_ACCEPT
-		// with the listening socket and NewEvent
-		iResult = WSAEventSelect(listener, NewEvent, FD_ACCEPT );
-		if (iResult != 0) {
-			sprintf_s(tmpstr, "WSAEventSelect failed with error: %d\n", WSAGetLastError());
-			closesocket(listener);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-		
 		//-------------------------
 		// Start listening on the socket
-//C#		listener.Listen(100);
 		if (listen(listener, SOMAXCONN) == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
 			closesocket(listener);
@@ -232,64 +181,16 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 			throw new SocketException("winsock ", tmpstr);
 		}
 
-//C#		listener.BeginAccept(new AsyncCallback(AcceptCB), listener);
-		//-------------------------
-		// Add the socket and event to the arrays, increment number of events
-		SocketArray[EventTotal] = listener;
-		EventArray[EventTotal] = NewEvent;
-		EventTotal++;
-
-		//-------------------------
-		// Wait for network events on all sockets
-		DWORD Index;
-		Index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE, WSA_INFINITE, FALSE);
-		Index = Index - WSA_WAIT_EVENT_0;
-
-		//-------------------------
-		// Iterate through all events and enumerate
-		// if the wait does not fail.
-		DWORD i;
-		for (i = Index; i < EventTotal; i++) {
-			Index = WSAWaitForMultipleEvents(1, &EventArray[i], TRUE, 1000, FALSE);
-			if ((Index != WSA_WAIT_FAILED) && (Index != WSA_WAIT_TIMEOUT)) {
-				iResult = WSAEnumNetworkEvents(SocketArray[i], EventArray[i], &NetworkEvents);
-				if (iResult == SOCKET_ERROR) {
-					sprintf_s(tmpstr, "WSAEnumNetworkEvents failed with error: %ld\n", WSAGetLastError());
-					closesocket(listener);
-					WSACleanup();
-					throw new SocketException("winsock ", tmpstr);
-				}
-
-				if (NetworkEvents.lNetworkEvents & FD_ACCEPT) {
-					AcceptCB(listener);
-				}
-			}
-		}
-
-#else // not ASYNC_SOCKETS
-
-		//-------------------------
-		// Start listening on the socket
-//C#		listener.Listen(100);
-		if (listen(listener, SOMAXCONN) == SOCKET_ERROR) {
-			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
-			closesocket(listener);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
-		// Accept a client socket
-//C#		listener.BeginAccept(new AsyncCallback(AcceptCB), listener);
-		SOCKET client = accept(listener, NULL, NULL);
-		if (client == INVALID_SOCKET) {
+		// Accept a handler socket
+		SOCKET handler = accept(listener, NULL, NULL);
+		if (handler == INVALID_SOCKET) {
 			sprintf_s(tmpstr, "accept failed: %d\n", WSAGetLastError());
 			closesocket(listener);
 			WSACleanup();
 			throw new SocketException("winsock ", tmpstr);
 		}
 
-		AcceptCB(listener);
-#endif // ASYNC_SOCKETS
+		AcceptCB(handler);
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 	}
@@ -374,8 +275,6 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 
 	try
 	{
-//C#		IPEndPoint remoteEP = new IPEndPoint(IPAddress.Loopback, port);
-
 		sprintf_s(portstr, "%d", port);
 
 		struct addrinfo *result = NULL, *ptr = NULL, hints;
@@ -395,7 +294,6 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 		}
 
 		clientIsBusy = true;
-//C#		SOCKET client = new SOCKET(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 		// Attempt to connect to the first address returned by
 		// the call to getaddrinfo
 		ptr = result;
@@ -411,72 +309,15 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 
 		freeaddrinfo(result);
 
-#ifdef ASYNC_SOCKETS
-		//-------------------------
-		// Create a new event
-		NewEvent = WSACreateEvent();
-		if (NewEvent == NULL) {
-			sprintf_s(tmpstr, "WSACreateEvent failed with error: %d\n", GetLastError());
-			closesocket(client);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
-//C#		client.BeginConnect(remoteEP, new AsyncCallback(ConnectCB), client);
-		//-------------------------
-		// Associate event types FD_CONNECT
-		// with the listening socket and NewEvent
-		iResult = WSAEventSelect(client, NewEvent, FD_CONNECT);
-		if (iResult != 0) {
-			sprintf_s(tmpstr, "WSAEventSelect failed with error: %d\n", WSAGetLastError());
-			closesocket(client);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
-		//-------------------------
-		// Add the socket and event to the arrays, increment number of events
-		SocketArray[EventTotal] = client;
-		EventArray[EventTotal] = NewEvent;
-		EventTotal++;
-
-		//-------------------------
-		// Wait for network events on all sockets
-		DWORD Index;
-		Index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE, WSA_INFINITE, FALSE);
-		Index = Index - WSA_WAIT_EVENT_0;
-
-		//-------------------------
-		// Iterate through all events and enumerate
-		// if the wait does not fail.
-		DWORD i;
-		for (i = Index; i < EventTotal; i++) {
-			Index = WSAWaitForMultipleEvents(1, &EventArray[i], TRUE, 1000, FALSE);
-			if ((Index != WSA_WAIT_FAILED) && (Index != WSA_WAIT_TIMEOUT)) {
-				iResult = WSAEnumNetworkEvents(SocketArray[i], EventArray[i], &NetworkEvents);
-				if (iResult == SOCKET_ERROR) {
-					sprintf_s(tmpstr, "WSAEnumNetworkEvents failed with error: %ld\n", WSAGetLastError());
-					closesocket(client);
-					WSACleanup();
-					throw new SocketException("winsock ", tmpstr);
-				}
-
-				if (NetworkEvents.lNetworkEvents & FD_CONNECT) {
-					ConnectCB(client);
-				}
-			}
-		}
-
-#else // not ASYNC_SOCKETS
-//C#		client.BeginConnect(remoteEP, new AsyncCallback(ConnectCB), client);
 		// Connect to server.
 		iResult = connect(client, ptr->ai_addr, (int)ptr->ai_addrlen);
 		if (iResult == SOCKET_ERROR) {
 			closesocket(client);
 			client = INVALID_SOCKET;
 		}
-		ConnectCB(client);
-#endif // ASYNC_SOCKETS
+		else {
+			ConnectCB(client);
+		}
 
 		// Should really try the next address returned by getaddrinfo
 		// if the connect call failed
@@ -539,7 +380,6 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-//C#	finally
 	catch (...)
 	{
 		clientIsBusy = false;
@@ -565,16 +405,12 @@ bool VMUV_TCP_Cpp::SocketWrapper::HasTraceMessages()
 	return traceLogger.HasMessages();
 }
 
-//C#	void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(IAsyncResult ar)
 void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 {
 	string methodName = "AcceptCB";
 
 	try
 	{
-//C#		SOCKET local = (SOCKET)ar.AsyncState;
-//C#		SOCKET handler = listener.EndAccept(ar);
-
 		if (usePing)
 			Send(handler, txDataPong);
 		else
@@ -631,11 +467,10 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 	}
 }
 
-void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<byte> data)
+void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 {
 	string methodName = "Send";
 	char tmpstr[100];
-	char *sendbuf = "Client: sending data test";
 
 	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
 	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
@@ -646,66 +481,8 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<byte> data)
 
 	try
 	{
-//C#		handler.BeginSend(data, 0, data.size(), 0, new AsyncCallback(SendCB), handler);
-
-#ifdef ASYNC_SOCKETS
-		//-------------------------
-		// Create a new event
-		NewEvent = WSACreateEvent();
-		if (NewEvent == NULL) {
-			sprintf_s(tmpstr, "WSACreateEvent failed with error: %d\n", GetLastError());
-			closesocket(handler);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
-		//-------------------------
-		// Associate event types FD_WRITE
-		// with the listening socket and NewEvent
-		int iResult = WSAEventSelect(handler, NewEvent, FD_WRITE);
-		if (iResult != 0) {
-			sprintf_s(tmpstr, "WSAEventSelect failed with error: %d\n", WSAGetLastError());
-			closesocket(handler);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
-		//-------------------------
-		// Add the socket and event to the arrays, increment number of events
-		SocketArray[EventTotal] = handler;
-		EventArray[EventTotal] = NewEvent;
-		EventTotal++;
-
-		//-------------------------
-		// Wait for network events on all sockets
-		DWORD Index;
-		Index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE, WSA_INFINITE, FALSE);
-		Index = Index - WSA_WAIT_EVENT_0;
-
-		//-------------------------
-		// Iterate through all events and enumerate
-		// if the wait does not fail.
-		DWORD i;
-		for (i = Index; i < EventTotal; i++) {
-			Index = WSAWaitForMultipleEvents(1, &EventArray[i], TRUE, 1000, FALSE);
-			if ((Index != WSA_WAIT_FAILED) && (Index != WSA_WAIT_TIMEOUT)) {
-				iResult = WSAEnumNetworkEvents(SocketArray[i], EventArray[i], &NetworkEvents);
-				if (iResult == SOCKET_ERROR) {
-					sprintf_s(tmpstr, "WSAEnumNetworkEvents failed with error: %ld\n", WSAGetLastError());
-					closesocket(handler);
-					WSACleanup();
-					throw new SocketException("winsock ", tmpstr);
-				}
-
-				if (NetworkEvents.lNetworkEvents & FD_WRITE) {
-					SendCB(handler);
-				}
-			}
-		}
-
-#else // not ASYNC_SOCKETS
 		// Send to server.
-		int iResult = send(handler, sendbuf, (int)strlen(sendbuf), 0);
+		int iResult = send(handler, &data[0], (int)strlen(&data[0]), 0);
 		if (iResult == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "send failed with error: %d\n", WSAGetLastError());
 			closesocket(handler);
@@ -713,8 +490,6 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<byte> data)
 			throw new SocketException("winsock ", tmpstr);
 		}
 		SendCB(handler);
-#endif // ASYNC_SOCKETS
-
 	}
 	catch (ArgumentNullException e0)
 	{
@@ -753,7 +528,6 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<byte> data)
 	}
 }
 
-//C#	void VMUV_TCP_Cpp::SocketWrapper::SendCB(IAsyncResult ar)
 void VMUV_TCP_Cpp::SocketWrapper::SendCB(SOCKET handler)
 {
 	string methodName = "SendCB";
@@ -761,11 +535,6 @@ void VMUV_TCP_Cpp::SocketWrapper::SendCB(SOCKET handler)
 
 	try
 	{
-//C#		SOCKET handler = (SOCKET)ar.AsyncState;
-//C#		int numBytesSent = handler.EndSend(ar);
-
-//C#		handler.Shutdown(SocketShutdown.Both);
-//C#		handler.Close();
 		// close the socket
 		int iResult = closesocket(handler);
 		if (iResult == SOCKET_ERROR) {
@@ -812,34 +581,8 @@ void VMUV_TCP_Cpp::SocketWrapper::ResetServer()
 
 	try
 	{
-//C#		listener.Listen(100);
-//C#		listener.BeginAccept(new AsyncCallback(AcceptCB), listener);
-
-#ifdef ASYNC_SOCKETS
-		//-------------------------
-		// Create a new event
-		NewEvent = WSACreateEvent();
-		if (NewEvent == NULL) {
-			sprintf_s(tmpstr, "WSACreateEvent failed with error: %d\n", GetLastError());
-			closesocket(listener);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
-		//-------------------------
-		// Associate event types FD_ACCEPT
-		// with the listening socket and NewEvent
-		int iResult = WSAEventSelect(listener, NewEvent, FD_ACCEPT);
-		if (iResult != 0) {
-			sprintf_s(tmpstr, "WSAEventSelect failed with error: %d\n", WSAGetLastError());
-			closesocket(listener);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
 		//-------------------------
 		// Start listening on the socket
-//C#		listener.Listen(100);
 		if (listen(listener, SOMAXCONN) == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
 			closesocket(listener);
@@ -847,61 +590,14 @@ void VMUV_TCP_Cpp::SocketWrapper::ResetServer()
 			throw new SocketException("winsock ", tmpstr);
 		}
 
-		//-------------------------
-		// Add the socket and event to the arrays, increment number of events
-		SocketArray[EventTotal] = listener;
-		EventArray[EventTotal] = NewEvent;
-		EventTotal++;
-
-		//-------------------------
-		// Wait for network events on all sockets
-		DWORD Index;
-		Index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE, WSA_INFINITE, FALSE);
-		Index = Index - WSA_WAIT_EVENT_0;
-
-		//-------------------------
-		// Iterate through all events and enumerate
-		// if the wait does not fail.
-		DWORD i;
-		for (i = Index; i < EventTotal; i++) {
-			Index = WSAWaitForMultipleEvents(1, &EventArray[i], TRUE, 1000, FALSE);
-			if ((Index != WSA_WAIT_FAILED) && (Index != WSA_WAIT_TIMEOUT)) {
-				iResult = WSAEnumNetworkEvents(SocketArray[i], EventArray[i], &NetworkEvents);
-				if (iResult == SOCKET_ERROR) {
-					sprintf_s(tmpstr, "WSAEnumNetworkEvents failed with error: %ld\n", WSAGetLastError());
-					closesocket(listener);
-					WSACleanup();
-					throw new SocketException("winsock ", tmpstr);
-				}
-
-				if (NetworkEvents.lNetworkEvents & FD_ACCEPT) {
-					AcceptCB(listener);
-				}
-			}
-		}
-
-#else // not ASYNC_SOCKETS
-		//-------------------------
-		// Start listening on the socket
-//C#		listener.Listen(100);
-		if (listen(listener, SOMAXCONN) == SOCKET_ERROR) {
-			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
-			closesocket(listener);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
-		}
-
-		SOCKET client = accept(listener, NULL, NULL);
-		if (client == INVALID_SOCKET) {
+		SOCKET handler = accept(listener, NULL, NULL);
+		if (handler == INVALID_SOCKET) {
 			sprintf_s(tmpstr, "accept failed: %d\n", WSAGetLastError());
 			closesocket(listener);
 			WSACleanup();
 			throw new SocketException("winsock ", tmpstr);
 		}
-
-		AcceptCB(listener);
-#endif // ASYNC_SOCKETS
-
+		AcceptCB(handler);
 	}
 	catch (ArgumentOutOfRangeException e1)
 	{
@@ -947,15 +643,11 @@ void VMUV_TCP_Cpp::SocketWrapper::ResetServer()
 	}
 }
 
-//C#	void VMUV_TCP_Cpp::SocketWrapper::ConnectCB(IAsyncResult ar)
 void VMUV_TCP_Cpp::SocketWrapper::ConnectCB(SOCKET client)
 {
 	string methodName = "ConnectCB";
 	try
 	{
-//C#		SOCKET client = (SOCKET)ar.AsyncState;
-
-//C#		client.EndConnect(ar);
 		Read(client);
 	}
 	catch (ArgumentNullException e1)
@@ -1000,7 +692,6 @@ void VMUV_TCP_Cpp::SocketWrapper::ConnectCB(SOCKET client)
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-//	finally
 	catch (...)
 	{
 		clientIsBusy = false;
@@ -1009,13 +700,9 @@ void VMUV_TCP_Cpp::SocketWrapper::ConnectCB(SOCKET client)
 
 void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET client)
 {
-	StateObject state = new StateObject();
+	StateObject state;
 	string methodName = "Read";
 	char tmpstr[100];
-
-#define DEFAULT_BUFLEN 512
-	char recvbuf[DEFAULT_BUFLEN];
-	int recvbuflen = DEFAULT_BUFLEN;
 
 	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
 	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
@@ -1027,75 +714,26 @@ void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET client)
 	try
 	{
 		state.workSocket = client;
-//C#		client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCB), state);
-
-#ifdef ASYNC_SOCKETS
-		//-------------------------
-		// Create a new event
-		NewEvent = WSACreateEvent();
-		if (NewEvent == NULL) {
-			sprintf_s(tmpstr, "WSACreateEvent failed with error: %d\n", GetLastError());
+		int iResult = recv(client, &(state.buffer[0]), state.BufferSize, 0);
+		if (iResult < 0) {
+			sprintf_s(tmpstr, "recv failed with error: %d\n", WSAGetLastError());
 			closesocket(client);
 			WSACleanup();
 			throw new SocketException("winsock ", tmpstr);
 		}
+		else if (iResult > 0) {
+			sprintf_s(tmpstr, "Bytes received: %d\n", iResult);
+			string msg = tmpstr;
+			DebugPrint(msg);
 
-		//-------------------------
-		// Associate event types FD_READ
-		// with the listening socket and NewEvent
-		int iResult = WSAEventSelect(client, NewEvent, FD_READ);
-		if (iResult != 0) {
-			sprintf_s(tmpstr, "WSAEventSelect failed with error: %d\n", WSAGetLastError());
-			closesocket(client);
-			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			ReadCB(state);
 		}
+		else if (iResult == 0) {
+			string msg = "Connection closed\n";
 
-		//-------------------------
-		// Add the socket and event to the arrays, increment number of events
-		SocketArray[EventTotal] = client;
-		EventArray[EventTotal] = NewEvent;
-		EventTotal++;
-
-		//-------------------------
-		// Wait for network events on all sockets
-		DWORD Index;
-		Index = WSAWaitForMultipleEvents(EventTotal, EventArray, FALSE, WSA_INFINITE, FALSE);
-		Index = Index - WSA_WAIT_EVENT_0;
-
-		//-------------------------
-		// Iterate through all events and enumerate
-		// if the wait does not fail.
-		DWORD i;
-		for (i = Index; i < EventTotal; i++) {
-			Index = WSAWaitForMultipleEvents(1, &EventArray[i], TRUE, 1000, FALSE);
-			if ((Index != WSA_WAIT_FAILED) && (Index != WSA_WAIT_TIMEOUT)) {
-				iResult = WSAEnumNetworkEvents(SocketArray[i], EventArray[i], &NetworkEvents);
-				if (iResult == SOCKET_ERROR) {
-					sprintf_s(tmpstr, "WSAEnumNetworkEvents failed with error: %ld\n", WSAGetLastError());
-					closesocket(client);
-					WSACleanup();
-					throw new SocketException("winsock ", tmpstr);
-				}
-
-				if (NetworkEvents.lNetworkEvents & FD_READ) {
-					ReadCB();
-				}
-			}
+			traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
+			DebugPrint(msg);
 		}
-
-#else // not ASYNC_SOCKETS
-		int iResult = recv(client, recvbuf, recvbuflen, 0);
-		if (iResult > 0)
-			printf("Bytes received: %d\n", iResult);
-		else if (iResult == 0)
-			printf("Connection closed\n");
-		else
-			printf("recv failed: %d\n", WSAGetLastError());
-
-		// what about ReadCB?
-#endif // ASYNC_SOCKETS
-
 	}
 	catch (ArgumentNullException e1)
 	{
@@ -1132,45 +770,39 @@ void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET client)
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-//	finally
 	catch (...)
 	{
 		clientIsBusy = false;
 	}
 }
 
-//C#	void VMUV_TCP_Cpp::SocketWrapper::ReadCB(IAsyncResult ar)
-void VMUV_TCP_Cpp::SocketWrapper::ReadCB(SOCKET client)
+void VMUV_TCP_Cpp::SocketWrapper::ReadCB(StateObject state)
 {
 	string methodName = "ReadCB";
+	char tmpstr[100];
 
 	try
 	{
-//C#		StateObject state = (StateObject)ar.AsyncState;
-//C#		SOCKET client = state.workSocket;
-//C#		int numBytesRead = client.EndReceive(ar);
-
-//C#		if (numBytesRead > 0)
-//C#		{
-			if (state.packetizer.IsPacketValid(state.buffer))
+		if (state.packetizer.IsPacketValid(state.buffer))
+		{
+			if (usePing)
 			{
-				if (usePing)
-				{
-					rxDataPing = state.packetizer.UnpackData(state.buffer);
-					rxTypePing = state.packetizer.GetPacketType(state.buffer);
-					usePing = false;
-				}
-				else
-				{
-					rxDataPong = state.packetizer.UnpackData(state.buffer);
-					rxTypePong = state.packetizer.GetPacketType(state.buffer);
-					usePing = true;
-				}
-
-				numPacketsRead++;
-				DebugPrint(numPacketsRead.ToString());
+				rxDataPing = state.packetizer.UnpackData(state.buffer);
+				rxTypePing = state.packetizer.GetPacketType(state.buffer);
+				usePing = false;
 			}
-//C#		}
+			else
+			{
+				rxDataPong = state.packetizer.UnpackData(state.buffer);
+				rxTypePong = state.packetizer.GetPacketType(state.buffer);
+				usePing = true;
+			}
+
+			numPacketsRead++;
+			sprintf_s(tmpstr, "numPacketsRead: %d\n", numPacketsRead);
+			string msg = tmpstr;
+			DebugPrint(msg);
+		}
 	}
 	catch (ArgumentNullException e1)
 	{

@@ -2,8 +2,6 @@
 
 #pragma once
 #include <vector>
-//#include <Afxsock.h>
-//#include <winsock.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
@@ -12,13 +10,9 @@
 
 using namespace std;
 
-#define byte unsigned char
 
 #include "Packetizer.h"
 #include "..\..\..\TraceLogger\Trace Logger Cpp\Trace Logger Cpp\TraceLogger.h"
-
-//using System.Net.Sockets;
-//using System.Security;
 
 namespace VMUV_TCP_Cpp
 {
@@ -47,12 +41,12 @@ namespace VMUV_TCP_Cpp
 		Trace_Logger_Cpp::TraceLogger traceLogger;
 		SOCKET listener;
 		const int port = 11069;
-		vector<byte> txDataPing;  // Do this incase Start() is called before the user sets any data
-		vector<byte> txDataPong;  // Do this incase Start() is called before the user sets any data
-		vector<byte> rxDataPing;  // Do this incase GetRxData() is called before the user gets any data
-		vector<byte> rxDataPong;  // Do this incase GetRxData() is called before the user gets any data
-		byte rxTypePing;
-		byte rxTypePong;
+		vector<char> txDataPing;  // Do this incase Start() is called before the user sets any data
+		vector<char> txDataPong;  // Do this incase Start() is called before the user sets any data
+		vector<char> rxDataPing;  // Do this incase GetRxData() is called before the user gets any data
+		vector<char> rxDataPong;  // Do this incase GetRxData() is called before the user gets any data
+		char rxTypePing;
+		char rxTypePong;
 		bool usePing;
 		Configuration config;
 		bool clientIsBusy;
@@ -70,19 +64,19 @@ namespace VMUV_TCP_Cpp
 		/// </summary>
 		/// <param name="payload"></param>
 		/// <param name="type"></param>
-		void ServerSetTxData(vector<byte> payload, byte type);
+		void ServerSetTxData(vector<char> payload, char type);
 
 		/// <summary>
 		/// Acquires the most recently received valid data payload.
 		/// </summary>
-		/// <returns>byte buffer with a copy of the most recently receieved valid data payload.</returns>
-		vector<byte> ClientGetRxData();
+		/// <returns>char buffer with a copy of the most recently receieved valid data payload.</returns>
+		vector<char> ClientGetRxData();
 
 		/// <summary>
 		/// Acquires the most recently received payload type.
 		/// </summary>
-		/// <returns>byte with the most recent payload type. </returns>
-		byte ClientGetRxType();
+		/// <returns>char with the most recent payload type. </returns>
+		char ClientGetRxType();
 
 		/// <summary>
 		/// Call this method only once after instantiation of the <c>SocketWrapper</c> object. This will start the 
@@ -111,7 +105,7 @@ namespace VMUV_TCP_Cpp
 	private:
 		void AcceptCB(SOCKET handler);
 
-		void Send(SOCKET handler, vector<byte> data);
+		void Send(SOCKET handler, vector<char> data);
 
 		void SendCB(SOCKET handler);
 
@@ -121,7 +115,7 @@ namespace VMUV_TCP_Cpp
 
 		void Read(SOCKET client);
 
-		void ReadCB(SOCKET client);
+		void ReadCB(StateObject state);
 
 		void DebugPrint(string s);
 	};

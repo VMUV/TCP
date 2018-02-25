@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.12
+VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VMUV TCP CSharp", "VMUV TCP CSharp\VMUV TCP CSharp.csproj", "{9E623C9A-5072-41BB-819A-7C1BA442E4A5}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trace Logger CSharp", "..\..\Trace Logger\Trace Logger CSharp\Trace Logger CSharp\Trace Logger CSharp.csproj", "{8E8B640F-36CB-4A6D-9117-D2847AF2FCCE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VMUV TCP CSharp Tests", "VMUV TCP CSharp Tests\VMUV TCP CSharp Tests.csproj", "{4161A7F5-FB70-41FC-BCC3-0094C84EF32D}"
 EndProject
@@ -19,10 +17,6 @@ Global
 		{9E623C9A-5072-41BB-819A-7C1BA442E4A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E623C9A-5072-41BB-819A-7C1BA442E4A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E623C9A-5072-41BB-819A-7C1BA442E4A5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8E8B640F-36CB-4A6D-9117-D2847AF2FCCE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8E8B640F-36CB-4A6D-9117-D2847AF2FCCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8E8B640F-36CB-4A6D-9117-D2847AF2FCCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8E8B640F-36CB-4A6D-9117-D2847AF2FCCE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4161A7F5-FB70-41FC-BCC3-0094C84EF32D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4161A7F5-FB70-41FC-BCC3-0094C84EF32D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4161A7F5-FB70-41FC-BCC3-0094C84EF32D}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -30,5 +24,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C9C8B454-EE44-4B57-983D-64A9BF5CFD01}
 	EndGlobalSection
 EndGlobal

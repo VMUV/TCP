@@ -11,6 +11,7 @@
 using namespace std;
 
 
+#include "StateObject.h"
 #include "Packetizer.h"
 #include "..\..\..\TraceLogger\Trace Logger Cpp\Trace Logger Cpp\TraceLogger.h"
 
@@ -118,6 +119,24 @@ namespace VMUV_TCP_Cpp
 		void ReadCB(StateObject state);
 
 		void DebugPrint(string s);
+
+	public:
+		// start a server using its own thread
+		void StartServerTestThread();
+		void StopServerTestThread();
+		void runServerTest();
+		bool serverTestRunning;
+
+		// start a client using its own thread
+		void StartClientTestThread();
+		void StopClientTestThread();
+		void runClientTest();
+		bool clientTestRunning;
+	private:
+		HANDLE m_ServerTestThread;
+		static DWORD __stdcall WASAPIServerTestThread(LPVOID Context);
+		HANDLE m_ClientTestThread;
+		static DWORD __stdcall WASAPIClientTestThread(LPVOID Context);
 	};
 
 	class ArgumentNullException

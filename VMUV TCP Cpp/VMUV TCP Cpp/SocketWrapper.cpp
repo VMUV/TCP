@@ -2,7 +2,6 @@
 
 #include "stdafx.h"
 
-#include "StateObject.h"
 #include "SocketWrapper.h"
 
 WSADATA wsaData;
@@ -16,8 +15,10 @@ VMUV_TCP_Cpp::SocketWrapper::SocketWrapper()
 	rxDataPong = { 0 };  // Do this incase GetRxData() is called before the user gets any data
 	usePing = true;
 	clientIsBusy = false;
-	moduleName = "SocketWrapper.cs";
+	moduleName = "SocketWrapper.cpp";
 	numPacketsRead = 0;
+	serverTestRunning = false;
+	clientTestRunning = false;
 }
 
 
@@ -35,8 +36,10 @@ VMUV_TCP_Cpp::SocketWrapper::SocketWrapper(Configuration configuration)
 	rxDataPong = { 0 };  // Do this incase GetRxData() is called before the user gets any data
 	usePing = true;
 	clientIsBusy = false;
-	moduleName = "SocketWrapper.cs";
+	moduleName = "SocketWrapper.cpp";
 	numPacketsRead = 0;
+	serverTestRunning = false;
+	clientTestRunning = false;
 }
 
 VMUV_TCP_Cpp::SocketWrapper::~SocketWrapper()
@@ -64,7 +67,7 @@ void VMUV_TCP_Cpp::SocketWrapper::ServerSetTxData(vector<char> payload, char typ
 			usePing = true;
 		}
 	}
-	catch (ArgumentOutOfRangeException e0)
+	catch (ArgumentOutOfRangeException &e0)
 	{
 		string msg = e0.Message + e0.StackTrace;
 
@@ -108,13 +111,14 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 	string methodName = "StartServer";
 	char tmpstr[100];
 	char portstr[10];
+	char* argv1 = "localhost";
 
-	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSANETWORKEVENTS NetworkEvents;
-	DWORD EventTotal = 0;
+//	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSANETWORKEVENTS NetworkEvents;
+//	DWORD EventTotal = 0;
 
-	HANDLE NewEvent = NULL;
+//	HANDLE NewEvent = NULL;
 
 	if (config != Configuration::server)
 		return;
@@ -125,12 +129,13 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 		// initializa Winsock
 		int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 		if (iResult != 0) {
-			throw new SocketException("winsock ", "unable to start winsock");
+			throw SocketException("winsock ", "unable to start winsock");
 		}
 
 		sprintf_s(portstr, "%d", port);
 
-		struct addrinfo *result = NULL, *ptr = NULL, hints;
+		struct addrinfo *result = NULL;
+		struct addrinfo *ptr = NULL, hints;
 
 		ZeroMemory(&hints, sizeof(hints));
 		hints.ai_family = AF_INET;
@@ -143,7 +148,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 		if (iResult != 0) {
 			sprintf_s(tmpstr, "getaddrinfo failed: %d\n", iResult);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 		
 		string msg = "TCP Server successfully started on port " + string(portstr);
@@ -156,7 +161,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 			sprintf_s(tmpstr, "Error at socket(): %ld\n", WSAGetLastError());
 			freeaddrinfo(result);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 
 		//-------------------------
@@ -168,7 +173,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 			freeaddrinfo(result);
 			closesocket(listener);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 		freeaddrinfo(result);
 
@@ -178,7 +183,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
 			closesocket(listener);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 
 		// Accept a handler socket
@@ -187,63 +192,63 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 			sprintf_s(tmpstr, "accept failed: %d\n", WSAGetLastError());
 			closesocket(listener);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 
 		AcceptCB(handler);
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 	}
-	catch (ArgumentNullException e0)
+	catch (ArgumentNullException &e0)
 	{
 		string msg = e0.Message + e0.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ArgumentOutOfRangeException e1)
+	catch (ArgumentOutOfRangeException &e1)
 	{
 		string msg = e1.Message + e1.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SecurityException e4)
+	catch (SecurityException &e4)
 	{
 		string msg = e4.Message + e4.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (NotSupportedException e5)
+	catch (NotSupportedException &e5)
 	{
 		string msg = e5.Message + e5.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (InvalidOperationException e6)
+	catch (InvalidOperationException &e6)
 	{
 		string msg = e6.Message + e6.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e7)
+	catch (Exception &e7)
 	{
 		string msg = e7.Message + e7.StackTrace;
 
@@ -262,35 +267,44 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 	string methodName = "ClientStartRead";
 	char tmpstr[100];
 	char portstr[10];
+	char* argv1 = "localhost";
 
-	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSANETWORKEVENTS NetworkEvents;
-	DWORD EventTotal = 0;
+//	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSANETWORKEVENTS NetworkEvents;
+//	DWORD EventTotal = 0;
 
-	HANDLE NewEvent = NULL;
+//	HANDLE NewEvent = NULL;
 
 	if (clientIsBusy || (config != Configuration::client))
 		return;
 
 	try
 	{
+		// the following from document msdn.microsoft.com ...> Using Winsock > Getting Started With Winsock
+		// initializa Winsock
+		int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+		if (iResult != 0) {
+			throw SocketException("winsock ", "unable to start winsock");
+		}
+
 		sprintf_s(portstr, "%d", port);
 
-		struct addrinfo *result = NULL, *ptr = NULL, hints;
+		struct addrinfo *result = NULL;
+		struct addrinfo *ptr = NULL, hints;
 
 		ZeroMemory(&hints, sizeof(hints));
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_protocol = IPPROTO_TCP;
-		hints.ai_flags = AI_PASSIVE;
+//		hints.ai_flags = AI_PASSIVE;
 
 		// Resolve the server address and port
-		int iResult = getaddrinfo(NULL, portstr, &hints, &result);
+		iResult = getaddrinfo(argv1, portstr, &hints, &result);
 		if (iResult != 0) {
 			sprintf_s(tmpstr, "getaddrinfo failed: %d\n", iResult);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 
 		clientIsBusy = true;
@@ -299,24 +313,22 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 		ptr = result;
 
 		// Create a SOCKET for connecting to server
-		SOCKET client = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if (client == INVALID_SOCKET) {
+		SOCKET ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (ConnectSocket == INVALID_SOCKET) {
 			sprintf_s(tmpstr, "Error at socket(): %ld\n", WSAGetLastError());
-			freeaddrinfo(result);
+			freeaddrinfo(ptr);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
-
-		freeaddrinfo(result);
 
 		// Connect to server.
-		iResult = connect(client, ptr->ai_addr, (int)ptr->ai_addrlen);
+		iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
 		if (iResult == SOCKET_ERROR) {
-			closesocket(client);
-			client = INVALID_SOCKET;
+			closesocket(ConnectSocket);
+			ConnectSocket = INVALID_SOCKET;
 		}
 		else {
-			ConnectCB(client);
+			ConnectCB(ConnectSocket);
 		}
 
 		// Should really try the next address returned by getaddrinfo
@@ -324,56 +336,58 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 		// But for this simple example we just free the resources
 		// returned by getaddrinfo and print an error message
 
-		if (client == INVALID_SOCKET) {
-			sprintf_s(tmpstr, "Unable to connect to server!\n");
+//		freeaddrinfo(result);
+
+		if (ConnectSocket == INVALID_SOCKET) {
+			sprintf_s(tmpstr, "Unable to connect to server!: %ld\n", WSAGetLastError());
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 		return;
 	}
-	catch (ArgumentNullException e0)
+	catch (ArgumentNullException &e0)
 	{
 		string msg = e0.Message + e0.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ArgumentOutOfRangeException e1)
+	catch (ArgumentOutOfRangeException &e1)
 	{
 		string msg = e1.Message + e1.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SecurityException e4)
+	catch (SecurityException &e4)
 	{
 		string msg = e4.Message + e4.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (InvalidOperationException e6)
+	catch (InvalidOperationException &e6)
 	{
 		string msg = e6.Message + e6.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e7)
+	catch (Exception &e7)
 	{
 		string msg = e7.Message + e7.StackTrace;
 
@@ -416,49 +430,49 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 		else
 			Send(handler, txDataPing);
 	}
-	catch (ArgumentNullException e0)
+	catch (ArgumentNullException &e0)
 	{
 		string msg = e0.Message + e0.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ArgumentOutOfRangeException e1)
+	catch (ArgumentOutOfRangeException &e1)
 	{
 		string msg = e1.Message + e1.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (NotSupportedException e5)
+	catch (NotSupportedException &e5)
 	{
 		string msg = e5.Message + e5.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (InvalidOperationException e6)
+	catch (InvalidOperationException &e6)
 	{
 		string msg = e6.Message + e6.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e7)
+	catch (Exception &e7)
 	{
 		string msg = e7.Message + e7.StackTrace;
 
@@ -472,12 +486,12 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 	string methodName = "Send";
 	char tmpstr[100];
 
-	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSANETWORKEVENTS NetworkEvents;
-	DWORD EventTotal = 0;
+//	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSANETWORKEVENTS NetworkEvents;
+//	DWORD EventTotal = 0;
 
-	HANDLE NewEvent = NULL;
+//	HANDLE NewEvent = NULL;
 
 	try
 	{
@@ -487,39 +501,39 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 			sprintf_s(tmpstr, "send failed with error: %d\n", WSAGetLastError());
 			closesocket(handler);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 		SendCB(handler);
 	}
-	catch (ArgumentNullException e0)
+	catch (ArgumentNullException &e0)
 	{
 		string msg = e0.Message + e0.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ArgumentOutOfRangeException e1)
+	catch (ArgumentOutOfRangeException &e1)
 	{
 		string msg = e1.Message + e1.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e4)
+	catch (Exception &e4)
 	{
 		string msg = e4.Message + e4.StackTrace;
 
@@ -540,24 +554,24 @@ void VMUV_TCP_Cpp::SocketWrapper::SendCB(SOCKET handler)
 		if (iResult == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "close failed with error: %d\n", WSAGetLastError());
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e4)
+	catch (Exception &e4)
 	{
 		string msg = e4.Message + e4.StackTrace;
 
@@ -573,11 +587,11 @@ void VMUV_TCP_Cpp::SocketWrapper::ResetServer()
 	string methodName = "ResetServer";
 	char tmpstr[100];
 
-	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
-	DWORD EventTotal = 0;
+//	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	DWORD EventTotal = 0;
 
-	HANDLE NewEvent = NULL;
+//	HANDLE NewEvent = NULL;
 
 	try
 	{
@@ -587,7 +601,7 @@ void VMUV_TCP_Cpp::SocketWrapper::ResetServer()
 			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
 			closesocket(listener);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 
 		SOCKET handler = accept(listener, NULL, NULL);
@@ -595,46 +609,46 @@ void VMUV_TCP_Cpp::SocketWrapper::ResetServer()
 			sprintf_s(tmpstr, "accept failed: %d\n", WSAGetLastError());
 			closesocket(listener);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 		AcceptCB(handler);
 	}
-	catch (ArgumentOutOfRangeException e1)
+	catch (ArgumentOutOfRangeException &e1)
 	{
 		string msg = e1.Message + e1.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (NotSupportedException e5)
+	catch (NotSupportedException &e5)
 	{
 		string msg = e5.Message + e5.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (InvalidOperationException e6)
+	catch (InvalidOperationException &e6)
 	{
 		string msg = e6.Message + e6.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e7)
+	catch (Exception &e7)
 	{
 		string msg = e7.Message + e7.StackTrace;
 
@@ -643,49 +657,49 @@ void VMUV_TCP_Cpp::SocketWrapper::ResetServer()
 	}
 }
 
-void VMUV_TCP_Cpp::SocketWrapper::ConnectCB(SOCKET client)
+void VMUV_TCP_Cpp::SocketWrapper::ConnectCB(SOCKET ConnectSocket)
 {
 	string methodName = "ConnectCB";
 	try
 	{
-		Read(client);
+		Read(ConnectSocket);
 	}
-	catch (ArgumentNullException e1)
+	catch (ArgumentNullException &e1)
 	{
 		string msg = e1.Message + e1.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ArgumentException e5)
+	catch (ArgumentException &e5)
 	{
 		string msg = e5.Message + e5.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (InvalidOperationException e6)
+	catch (InvalidOperationException &e6)
 	{
 		string msg = e6.Message + e6.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e7)
+	catch (Exception &e7)
 	{
 		string msg = e7.Message + e7.StackTrace;
 
@@ -698,28 +712,28 @@ void VMUV_TCP_Cpp::SocketWrapper::ConnectCB(SOCKET client)
 	}
 }
 
-void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET client)
+void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET ConnectSocket)
 {
 	StateObject state;
 	string methodName = "Read";
 	char tmpstr[100];
 
-	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
-	WSANETWORKEVENTS NetworkEvents;
-	DWORD EventTotal = 0;
+//	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
+//	WSANETWORKEVENTS NetworkEvents;
+//	DWORD EventTotal = 0;
 
-	HANDLE NewEvent = NULL;
+//	HANDLE NewEvent = NULL;
 
 	try
 	{
-		state.workSocket = client;
-		int iResult = recv(client, &(state.buffer[0]), state.BufferSize, 0);
+		state.workSocket = ConnectSocket;
+		int iResult = recv(ConnectSocket, &(state.buffer[0]), state.BufferSize, 0);
 		if (iResult < 0) {
 			sprintf_s(tmpstr, "recv failed with error: %d\n", WSAGetLastError());
-			closesocket(client);
+			closesocket(ConnectSocket);
 			WSACleanup();
-			throw new SocketException("winsock ", tmpstr);
+			throw SocketException("winsock ", tmpstr);
 		}
 		else if (iResult > 0) {
 			sprintf_s(tmpstr, "Bytes received: %d\n", iResult);
@@ -735,35 +749,35 @@ void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET client)
 			DebugPrint(msg);
 		}
 	}
-	catch (ArgumentNullException e1)
+	catch (ArgumentNullException &e1)
 	{
 		string msg = e1.Message + e1.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ArgumentOutOfRangeException e5)
+	catch (ArgumentOutOfRangeException &e5)
 	{
 		string msg = e5.Message + e5.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e7)
+	catch (Exception &e7)
 	{
 		string msg = e7.Message + e7.StackTrace;
 
@@ -804,42 +818,42 @@ void VMUV_TCP_Cpp::SocketWrapper::ReadCB(StateObject state)
 			DebugPrint(msg);
 		}
 	}
-	catch (ArgumentNullException e1)
+	catch (ArgumentNullException &e1)
 	{
 		string msg = e1.Message + e1.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (SocketException e2)
+	catch (SocketException &e2)
 	{
 		string msg = e2.Message + e2.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ObjectDisposedException e3)
+	catch (ObjectDisposedException &e3)
 	{
 		string msg = e3.Message + e3.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (ArgumentException e5)
+	catch (ArgumentException &e5)
 	{
 		string msg = e5.Message + e5.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (InvalidOperationException e6)
+	catch (InvalidOperationException &e6)
 	{
 		string msg = e6.Message + e6.StackTrace;
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
 	}
-	catch (Exception e7)
+	catch (Exception &e7)
 	{
 		string msg = e7.Message + e7.StackTrace;
 
@@ -855,4 +869,74 @@ void VMUV_TCP_Cpp::SocketWrapper::DebugPrint(string s)
 #if DEBUG
 	Console.WriteLine(s);
 #endif
+}
+
+//--------------------------------------------------------------------
+// code for testing server and client using separate threads
+
+DWORD  VMUV_TCP_Cpp::SocketWrapper::WASAPIServerTestThread(LPVOID Context)
+{
+	VMUV_TCP_Cpp::SocketWrapper *pSocketWrapper = static_cast<VMUV_TCP_Cpp::SocketWrapper *>(Context);
+
+	try {
+		pSocketWrapper->runServerTest();
+	}
+	catch (...) {
+		int i = 0; // place to hang a break point
+	}
+	return 0;
+}
+
+void VMUV_TCP_Cpp::SocketWrapper::StartServerTestThread()
+{
+	m_ServerTestThread = CreateThread(NULL, 0, WASAPIServerTestThread, this, 0, NULL);
+}
+
+void VMUV_TCP_Cpp::SocketWrapper::runServerTest()
+{
+	serverTestRunning = true;
+	StartServer();
+	serverTestRunning = false;
+}
+
+void VMUV_TCP_Cpp::SocketWrapper::StopServerTestThread()
+{
+	if (serverTestRunning) {
+		int ret = TerminateThread(m_ServerTestThread, 0);
+		serverTestRunning = false;
+	}
+}
+
+
+DWORD  VMUV_TCP_Cpp::SocketWrapper::WASAPIClientTestThread(LPVOID Context)
+{
+	VMUV_TCP_Cpp::SocketWrapper *pSocketWrapper = static_cast<VMUV_TCP_Cpp::SocketWrapper *>(Context);
+
+	try {
+		pSocketWrapper->runClientTest();
+	}
+	catch (...) {
+		int i = 0; // place to hang a break point
+	}
+	return 0;
+}
+
+void VMUV_TCP_Cpp::SocketWrapper::StartClientTestThread()
+{
+	m_ClientTestThread = CreateThread(NULL, 0, WASAPIClientTestThread, this, 0, NULL);
+}
+
+void VMUV_TCP_Cpp::SocketWrapper::runClientTest()
+{
+	clientTestRunning = true;
+	ClientStartRead();
+	clientTestRunning = false;
+}
+
+void VMUV_TCP_Cpp::SocketWrapper::StopClientTestThread()
+{
+	if (clientTestRunning) {
+		int ret = TerminateThread(m_ClientTestThread, 0);
+		clientTestRunning = false;
+	}
 }

@@ -4,7 +4,6 @@
 
 #include "Packetizer.h"
 
-#define Int16MaxValue 32767
 
 VMUV_TCP_Cpp::Packetizer::Packetizer()
 {
@@ -16,7 +15,7 @@ VMUV_TCP_Cpp::Packetizer::~Packetizer()
 }
 
 
-void VMUV_TCP_Cpp::Packetizer::BuildHeader(vector<char> packet, char type, short len)
+void VMUV_TCP_Cpp::Packetizer::BuildHeader(vector<char> &packet, char type, short len)
 {
 	packet[sycn1Loc] = sync1;
 	packet[sycn2Loc] = sync2;
@@ -38,19 +37,20 @@ short VMUV_TCP_Cpp::Packetizer::CalculateCheckSumFromPayload(vector<char> payloa
 	return chkSum;
 }
 
-vector<char> VMUV_TCP_Cpp::Packetizer::PacketizeData(vector<char> payload, char type)
+vector<char> VMUV_TCP_Cpp::Packetizer::PacketizeData(vector<char> payload, char type)  throw(ArgumentOutOfRangeException)
 {
 	short len = 0;
 
 	try
 	{
-		if (payload.size() > Int16MaxValue)
-			throw new ArgumentOutOfRangeException("payload",
+		if (payload.size() > Int16MaxValue) {
+			throw ArgumentOutOfRangeException("payload",
 				"Length is greater than short.MaxValue");
+		}
 		else
 			len = (short)(payload.size() & 0xffff);
 	}
-	catch (OverflowException e)
+	catch (OverflowException &e)
 	{
 		// TODO:
 	}
@@ -73,6 +73,10 @@ bool VMUV_TCP_Cpp::Packetizer::IsPacketValid(vector<char> packet)
 {
 	try
 	{
+		// bd: I added this to avoid exceptions from accessing header bytes
+		if (packet.size() < numOverHeadBytes)
+			return false;
+
 		if (packet[sycn1Loc] != sync1)
 			return false;
 
@@ -99,22 +103,22 @@ bool VMUV_TCP_Cpp::Packetizer::IsPacketValid(vector<char> packet)
 		if (recChkSum != calcChkSum)
 			return false;
 	}
-	catch (IndexOutOfRangeException e0)
+	catch (IndexOutOfRangeException &e0)
 	{
 		// TODO:
 		return false;
 	}
-	catch (NullReferenceException e1)
+	catch (NullReferenceException &e1)
 	{
 		// TODO:
 		return false;
 	}
-	catch (OverflowException e2)
+	catch (OverflowException &e2)
 	{
 		// TODO:
 		return false;
 	}
-	catch (Exception e3)
+	catch (Exception &e3)
 	{
 		// TODO:
 		return false;
@@ -123,15 +127,15 @@ bool VMUV_TCP_Cpp::Packetizer::IsPacketValid(vector<char> packet)
 	return true;
 }
 
-char VMUV_TCP_Cpp::Packetizer::GetPacketType(vector<char> packet)
+char VMUV_TCP_Cpp::Packetizer::GetPacketType(vector<char> packet) throw(ArgumentException)
 {
 	if (IsPacketValid(packet))
 		return packet[typeLoc];
 	else
-		throw new ArgumentException("packet", "type is not valid");
+		throw ArgumentException("packet", "type is not valid");
 }
 
-vector<char> VMUV_TCP_Cpp::Packetizer::UnpackData(vector<char> packet)
+vector<char> VMUV_TCP_Cpp::Packetizer::UnpackData(vector<char> packet) throw(ArgumentException)
 {
 	if (IsPacketValid(packet))
 	{
@@ -147,5 +151,5 @@ vector<char> VMUV_TCP_Cpp::Packetizer::UnpackData(vector<char> packet)
 		return rtn;
 	}
 	else
-		throw new ArgumentException("packet", "packet is not valid");
+		throw ArgumentException("packet", "packet is not valid");
 }

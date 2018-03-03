@@ -6,35 +6,12 @@
 
 using namespace std;
 
+#define Int16MaxValue 32767
+#define ShortMaxValue 32767
+
 
 namespace VMUV_TCP_Cpp
 {
-	class Packetizer
-	{
-	public:
-		Packetizer();
-		virtual ~Packetizer();
-
-		const char sync1 = 0x69;
-		const char sync2 = 0xee;
-		const int numOverHeadBytes = 7;
-		const char sycn1Loc = 0x00;
-		const char sycn2Loc = 0x01;
-		const char typeLoc = 0x02;
-		const char lenMSBLoc = 0x03;
-		const char lenLSBLoc = 0x04;
-		const char dataStartLoc = 0x05;
-
-	protected:
-		void BuildHeader(vector<char> packet, char type, short len);
-		short CalculateCheckSumFromPayload(vector<char> payload, short len);
-
-	public:
-		vector<char> PacketizeData(vector<char> payload, char type);
-		bool IsPacketValid(vector<char> packet);
-		char GetPacketType(vector<char> packet);
-		vector<char> UnpackData(vector<char> packet);
-	};
 
 	class ArgumentOutOfRangeException
 	{
@@ -87,4 +64,33 @@ namespace VMUV_TCP_Cpp
 		string Message;
 		string StackTrace;
 	};
+
+	//-------------------------------------------------------------------
+	class Packetizer
+	{
+	public:
+		Packetizer();
+		virtual ~Packetizer();
+
+		const char sync1 = 0x69;
+		const char sync2 = 0xee;
+		const int numOverHeadBytes = 7;
+		const char sycn1Loc = 0x00;
+		const char sycn2Loc = 0x01;
+		const char typeLoc = 0x02;
+		const char lenMSBLoc = 0x03;
+		const char lenLSBLoc = 0x04;
+		const char dataStartLoc = 0x05;
+
+	protected:
+		void BuildHeader(vector<char> &packet, char type, short len);
+		short CalculateCheckSumFromPayload(vector<char> payload, short len);
+
+	public:
+		vector<char> PacketizeData(vector<char> payload, char type) throw(ArgumentOutOfRangeException);
+		bool IsPacketValid(vector<char> packet);
+		char GetPacketType(vector<char> packet)  throw(ArgumentException);
+		vector<char> UnpackData(vector<char> packet) throw(ArgumentException);
+	};
+
 }

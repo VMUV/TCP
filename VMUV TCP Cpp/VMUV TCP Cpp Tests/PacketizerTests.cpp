@@ -195,8 +195,6 @@ namespace VMUV_TCP_CppTests
 
 		TEST_METHOD(UnpackValidPacket)
 		{
-//			byte[] payload = new byte[]{ 0x56, 0x23, 0x89 };
-//			byte[] packet = packetizer.PacketizeData(payload, 0x12);
 			vector<char> payload(3);
 			payload[0] = (char)0x56;
 			payload[1] = (char)0x23;

@@ -12,144 +12,92 @@ namespace VMUV_TCP_CppTests
 	{
 	public:
 
-//		TEST_METHOD(ServerSetTxDataTest)
-//		{
-//			SocketWrapper testServer(server);
-//			vector<char> payload(21);
-//			strcpy(&payload[0], "this is a test - 123");
-//			char type = 0x12;
-//
-//			testServer.ServerSetTxData(payload, type);
-//			// need to access private member usePing, txDataPing, txDataPong to verify this function
-//		}
-//
-//		TEST_METHOD(ClientGetRxDataTest)
-//		{
-//			SocketWrapper testServer(client);
-//			vector<char> payload;
-//			payload = testServer.ClientGetRxData();
-//			// need to access private members usePing, rxDataPing, rxDataPong to verify this function
-//		}
-//
-//		TEST_METHOD(ClientGetRxTypeTest)
-//		{
-//			SocketWrapper testServer(client);
-//			char type = testServer.ClientGetRxType();
-//			// need to access private members usePing, rxTypePing, rxTypePong to verify this function
-//		}
-//
-//		TEST_METHOD(StartServerTest)
-//		{
-//			return;
-//			SocketWrapper testServer(server);
-////			SocketWrapper testClient(client);
-//
-//			//client.StartServer();
-//			//Assert.AreEqual(testServer.HasTraceMessages(), false);
-//
-////			testServer.StartServer();
-//			// we expect the thread to hang listening for a client
-//			testServer.StartServerTestThread();
-//			Sleep(10);
-//
-//			Assert::AreEqual(testServer.serverTestRunning, true);
-////			Assert::AreEqual(testServer.HasTraceMessages(), true);
-//
-//			testServer.StopServerTestThread();
-//			Assert::AreEqual(testServer.serverTestRunning, false);
-//
-////			vector<Trace_Logger_Cpp::TraceLoggerMessage> messages;
-////			messages = testServer.GetTraceMessages();
-////			Assert::AreEqual((int)messages.size(), (int)1);
-////			Assert::AreEqual(&(messages[0].moduleName[0]), "SocketWrapper.cpp");
-////			Assert::AreEqual(&(messages[0].methodName[0]), "StartServer");
-////			Assert::AreEqual(&(messages[0].message[0]), "TCP Server successfully started on port 11069");
-//
-//			// ok, so I dont know how to stop the server - perhaps it happens when the SocketWrapper is destroyed?
-//
-//			//// set tx data
-//			//byte[] txData = new byte[]{ 0x69, 0x02, 0x45, 0x89 };
-//			//vector<char> txData(4);
-//			//txData[0] = (char)0x69;
-//			//txData[1] = (char)0x02;
-//			//txData[2] = (char)0x45;
-//			//txData[3] = (char)0x89;
-//			//for (int j = 0; j < 10; j++)
-//			//{
-//			//	server.ServerSetTxData(txData, 0);
-//		}
-//
-		TEST_METHOD(ClientStartReadTest)
+		TEST_METHOD(ServerSetTxDataTest)
 		{
 			SocketWrapper testServer(server);
+			vector<char> payload(21);
+			strcpy(&payload[0], "this is a test - 123");
+			char type = 0x12;
+
+			testServer.ServerSetTxData(payload, type);
+			// need to access private member usePing, txDataPing, txDataPong to verify this function
+		}
+
+		TEST_METHOD(ClientGetRxDataTest)
+		{
+			SocketWrapper testServer(client);
+			vector<char> payload;
+			payload = testServer.ClientGetRxData();
+			// need to access private members usePing, rxDataPing, rxDataPong to verify this function
+		}
+
+		TEST_METHOD(ClientGetRxTypeTest)
+		{
+			SocketWrapper testServer(client);
+			char type = testServer.ClientGetRxType();
+			// need to access private members usePing, rxTypePing, rxTypePong to verify this function
+		}
+
+		// note: for this test to succeed, you must first start TestServer executable, 
+		// built as a separate project in this solution
+		TEST_METHOD(ClientReadTest)
+		{
 			SocketWrapper testClient(client);
 
-			testServer.StartServerTestThread();
-			Sleep(10);
+// this is my first attempt to start the test server here
+// it didnt work - will try more later...-bd
+//			// start the server as a new process
+//			STARTUPINFO si;
+//			PROCESS_INFORMATION pi;
+//
+//			ZeroMemory(&si, sizeof(si));
+//			si.cb = sizeof(si);
+//			ZeroMemory(&pi, sizeof(pi));
+//
+//			LPCTSTR servername;
+//			servername = (LPCTSTR)"TestServer.exe";
+//			bool rc = CreateProcess(servername,   // module name
+//				NULL,        // Command line
+//				NULL,           // Process handle not inheritable
+//				NULL,           // Thread handle not inheritable
+//				FALSE,          // Set handle inheritance to FALSE
+//				0,              // No creation flags
+//				NULL,           // Use parent's environment block
+//				NULL,           // Use parent's starting directory 
+//				&si,            // Pointer to STARTUPINFO structure
+//				&pi);           // Pointer to PROCESS_INFORMATION structure
+//			Assert::AreEqual(!rc, false);
+//
+//			Sleep(100);
 
+			// set tx data
 			vector<char> txData(4);
 			txData[0] = (char)0x69;
 			txData[1] = (char)0x02;
 			txData[2] = (char)0x45;
 			txData[3] = (char)0x89;
-			testServer.ServerSetTxData(txData, 0);
 
-			//			testClient.ClientStartRead();
-			// we expect the thread to hang waiting to connect
-			// well, perhaps it times out...
-			testClient.StartClientTestThread();
-			Sleep(100);
+			testClient.ClientStartRead();
+			testClient.ClientContinueRead();
+			
+//			// Wait until child process exits.
+//			WaitForSingleObject(pi.hProcess, INFINITE);
+//
+//			// Close process and thread handles. 
+//			CloseHandle(pi.hProcess);
+//			CloseHandle(pi.hThread);
 
-			Assert::AreEqual(testClient.clientTestRunning, true);
-			testClient.StopClientTestThread();
-			Assert::AreEqual(testClient.clientTestRunning, false);
-			testServer.StopServerTestThread();
+			Assert::AreEqual(testClient.HasTraceMessages(), false);
+			vector<char> rxData = testClient.ClientGetRxData();
+			Assert::AreEqual(txData.size() != rxData.size(), false);
+			char type = testClient.ClientGetRxType();
+			Assert::AreEqual(type != 0, false);
+			for (int i = 0; i < txData.size(); i++) {
+				Assert::AreEqual(txData[i] != rxData[i], false);
+			}
 		}
-		//TEST_METHOD(GetTraceMessagesTest)
-		//{
-		//	// todo
-		//}
 
-		//TEST_METHOD(HasTraceMessagesTest)
-		//{
-		//	// todo
-		//}
-
-		//TEST_METHOD(AcceptCBTest)
-		//{
-		//	// todo
-		//}
-
-		//TEST_METHOD(SendTest)
-		//{
-		//	// todo
-		//}
-
-		//TEST_METHOD(SendCBTest)
-		//{
-		//	// todo
-		//}
-
-		//TEST_METHOD(ResetServerTest)
-		//{
-		//	// todo
-		//}
-
-		//TEST_METHOD(ConnectCBTest)
-		//{
-		//	// todo
-		//}
-
-		//TEST_METHOD(ReadTest)
-		//{
-		//	// todo
-		//}
-
-		//TEST_METHOD(ReadCBTest)
-		//{
-		//	// todo
-		//}
-
+		// the following test is not finished yet -bd
 		//TEST_METHOD(SocketWrapperEndToEndTest)
 		//{
 		//	//SocketWrapper server = new SocketWrapper(Configuration.server);

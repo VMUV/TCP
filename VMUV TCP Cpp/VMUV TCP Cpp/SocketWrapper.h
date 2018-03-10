@@ -26,6 +26,8 @@ namespace VMUV_TCP_Cpp
 		client
 	};
 
+#define DEFAULT_BUFLEN 512
+
 	class SocketWrapper
 	{
 	public:
@@ -40,8 +42,15 @@ namespace VMUV_TCP_Cpp
 	private:
 		Packetizer packetizer;
 		Trace_Logger_Cpp::TraceLogger traceLogger;
-		SOCKET listener;
+		SOCKET ListenSocket;
+		SOCKET ConnectSocket;
+		SOCKET ClientSocket;
 		const int port = 11069;
+
+		const char *sendbuf = "this is a test";
+		char recvbuf[DEFAULT_BUFLEN];
+		int recvbuflen = DEFAULT_BUFLEN;
+
 		vector<char> txDataPing;  // Do this incase Start() is called before the user sets any data
 		vector<char> txDataPong;  // Do this incase Start() is called before the user sets any data
 		vector<char> rxDataPing;  // Do this incase GetRxData() is called before the user gets any data
@@ -84,11 +93,13 @@ namespace VMUV_TCP_Cpp
 		/// server listener for incoming connections.
 		/// </summary>
 		void StartServer();
+		void ContinueServer();
 
 		/// <summary>
 		/// Call this method in from the main thread to start the next client read process.
 		/// </summary>
 		void ClientStartRead();
+		void ClientContinueRead();
 
 		/// <summary>
 		/// Returns all stored trace messages within the <c>TraceLogger</c> object. Call this method after first determining if the 

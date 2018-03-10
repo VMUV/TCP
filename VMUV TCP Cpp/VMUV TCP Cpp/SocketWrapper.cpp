@@ -8,7 +8,7 @@ WSADATA wsaData;
 
 VMUV_TCP_Cpp::SocketWrapper::SocketWrapper()
 {
-	listener = INVALID_SOCKET;
+	ListenSocket = INVALID_SOCKET;
 	txDataPing = { 0 };  // Do this incase Start() is called before the user sets any data
 	txDataPong = { 0 };  // Do this incase Start() is called before the user sets any data
 	rxDataPing = { 0 };  // Do this incase GetRxData() is called before the user gets any data
@@ -29,7 +29,7 @@ VMUV_TCP_Cpp::SocketWrapper::SocketWrapper()
 VMUV_TCP_Cpp::SocketWrapper::SocketWrapper(Configuration configuration)
 {
 	config = configuration;
-	listener = INVALID_SOCKET;
+	ListenSocket = INVALID_SOCKET;
 	txDataPing = { 0 };  // Do this incase Start() is called before the user sets any data
 	txDataPong = { 0 };  // Do this incase Start() is called before the user sets any data
 	rxDataPing = { 0 };  // Do this incase GetRxData() is called before the user gets any data
@@ -155,9 +155,9 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 
 		//-------------------------
 		// Create a listening socket
-		listener = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+		ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 
-		if (listener == INVALID_SOCKET) {
+		if (ListenSocket == INVALID_SOCKET) {
 			sprintf_s(tmpstr, "Error at socket(): %ld\n", WSAGetLastError());
 			freeaddrinfo(result);
 			WSACleanup();
@@ -167,11 +167,11 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 		//-------------------------
 		// Bind the listening socket
 		// Setup the TCP listening socket
-		iResult = bind(listener, result->ai_addr, (int)result->ai_addrlen);
+		iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
 		if (iResult == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "bind failed with error: %d\n", WSAGetLastError());
 			freeaddrinfo(result);
-			closesocket(listener);
+			closesocket(ListenSocket);
 			WSACleanup();
 			throw SocketException("winsock ", tmpstr);
 		}
@@ -179,23 +179,23 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 
 		//-------------------------
 		// Start listening on the socket
-		if (listen(listener, SOMAXCONN) == SOCKET_ERROR) {
+		if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
-			closesocket(listener);
+			closesocket(ListenSocket);
 			WSACleanup();
 			throw SocketException("winsock ", tmpstr);
 		}
 
 		// Accept a handler socket
-		SOCKET handler = accept(listener, NULL, NULL);
-		if (handler == INVALID_SOCKET) {
+		ClientSocket = accept(ListenSocket, NULL, NULL);
+		if (ClientSocket == INVALID_SOCKET) {
 			sprintf_s(tmpstr, "accept failed: %d\n", WSAGetLastError());
-			closesocket(listener);
+			closesocket(ListenSocket);
 			WSACleanup();
 			throw SocketException("winsock ", tmpstr);
 		}
 
-		AcceptCB(handler);
+//		AcceptCB(handler);
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 	}
@@ -257,6 +257,23 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 	}
 }
 
+
+void VMUV_TCP_Cpp::SocketWrapper::ContinueServer()
+{
+	int iResult;
+	int iSendResult;
+
+	// No longer need server socket
+	printf("about to invoke closesocket(ListenSocket)\n");
+	closesocket(ListenSocket);
+
+	AcceptCB(ClientSocket);
+
+	//// cleanup
+	WSACleanup();
+	printf("ContinueServer Done\n");
+}
+
 /// <summary>
 /// Call this method in from the main thread to start the next client read process.
 /// </summary>
@@ -269,6 +286,7 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 	char portstr[10];
 	char* argv1 = "localhost";
 
+	ConnectSocket = INVALID_SOCKET;
 //	SOCKET SocketArray[WSA_MAXIMUM_WAIT_EVENTS];
 //	WSAEVENT EventArray[WSA_MAXIMUM_WAIT_EVENTS];
 //	WSANETWORKEVENTS NetworkEvents;
@@ -297,7 +315,6 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_protocol = IPPROTO_TCP;
-//		hints.ai_flags = AI_PASSIVE;
 
 		// Resolve the server address and port
 		iResult = getaddrinfo(argv1, portstr, &hints, &result);
@@ -308,35 +325,32 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 		}
 
 		clientIsBusy = true;
-		// Attempt to connect to the first address returned by
-		// the call to getaddrinfo
-		ptr = result;
+		// Attempt to connect to an address until one succeeds
+		for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
 
-		// Create a SOCKET for connecting to server
-		SOCKET ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if (ConnectSocket == INVALID_SOCKET) {
-			sprintf_s(tmpstr, "Error at socket(): %ld\n", WSAGetLastError());
-			freeaddrinfo(ptr);
-			WSACleanup();
-			throw SocketException("winsock ", tmpstr);
+			// Create a SOCKET for connecting to server
+			ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+			if (ConnectSocket == INVALID_SOCKET) {
+				sprintf_s(tmpstr, "Error at socket(): %ld\n", WSAGetLastError());
+				freeaddrinfo(ptr);
+				WSACleanup();
+				throw SocketException("winsock ", tmpstr);
+			}
+
+			// Connect to server.
+			iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+			if (iResult == SOCKET_ERROR) {
+				closesocket(ConnectSocket);
+				ConnectSocket = INVALID_SOCKET;
+				continue;
+			}
+			else {
+//				ConnectCB(ConnectSocket);
+			}
+			break;
 		}
 
-		// Connect to server.
-		iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
-		if (iResult == SOCKET_ERROR) {
-			closesocket(ConnectSocket);
-			ConnectSocket = INVALID_SOCKET;
-		}
-		else {
-			ConnectCB(ConnectSocket);
-		}
-
-		// Should really try the next address returned by getaddrinfo
-		// if the connect call failed
-		// But for this simple example we just free the resources
-		// returned by getaddrinfo and print an error message
-
-//		freeaddrinfo(result);
+		freeaddrinfo(result);
 
 		if (ConnectSocket == INVALID_SOCKET) {
 			sprintf_s(tmpstr, "Unable to connect to server!: %ld\n", WSAGetLastError());
@@ -398,6 +412,19 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 	{
 		clientIsBusy = false;
 	}
+}
+
+void VMUV_TCP_Cpp::SocketWrapper::ClientContinueRead()
+{
+	int iResult;
+
+	printf("about to invoke recv()\n");
+	Read(ConnectSocket);
+
+	// cleanup
+	closesocket(ConnectSocket);
+	WSACleanup();
+	printf("ClientContinueRead Done\n");
 }
 
 /// <summary>
@@ -496,13 +523,14 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 	try
 	{
 		// Send to server.
-		int iResult = send(handler, &data[0], (int)strlen(&data[0]), 0);
+		int iResult = send(handler, &data[0], data.size(), 0);
 		if (iResult == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "send failed with error: %d\n", WSAGetLastError());
 			closesocket(handler);
 			WSACleanup();
 			throw SocketException("winsock ", tmpstr);
 		}
+		printf("Bytes Sent: %ld\n", iResult);
 		SendCB(handler);
 	}
 	catch (ArgumentNullException &e0)
@@ -597,17 +625,17 @@ void VMUV_TCP_Cpp::SocketWrapper::ResetServer()
 	{
 		//-------------------------
 		// Start listening on the socket
-		if (listen(listener, SOMAXCONN) == SOCKET_ERROR) {
+		if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
-			closesocket(listener);
+			closesocket(ListenSocket);
 			WSACleanup();
 			throw SocketException("winsock ", tmpstr);
 		}
 
-		SOCKET handler = accept(listener, NULL, NULL);
+		SOCKET handler = accept(ListenSocket, NULL, NULL);
 		if (handler == INVALID_SOCKET) {
 			sprintf_s(tmpstr, "accept failed: %d\n", WSAGetLastError());
-			closesocket(listener);
+			closesocket(ListenSocket);
 			WSACleanup();
 			throw SocketException("winsock ", tmpstr);
 		}
@@ -736,6 +764,7 @@ void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET ConnectSocket)
 			throw SocketException("winsock ", tmpstr);
 		}
 		else if (iResult > 0) {
+			printf("Bytes received: %d\n", iResult);
 			sprintf_s(tmpstr, "Bytes received: %d\n", iResult);
 			string msg = tmpstr;
 			DebugPrint(msg);
@@ -896,6 +925,7 @@ void VMUV_TCP_Cpp::SocketWrapper::runServerTest()
 {
 	serverTestRunning = true;
 	StartServer();
+	ContinueServer();
 	serverTestRunning = false;
 }
 

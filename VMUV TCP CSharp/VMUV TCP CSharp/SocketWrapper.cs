@@ -8,26 +8,21 @@ namespace VMUV_TCP_CSharp
 {
     public class SocketWrapper
     {
-        private Packetizer packetizer = new Packetizer();
         private TraceLogger traceLogger = new TraceLogger();
         private Socket listener = null;
         private const int port = 11069;
-        private byte[] txDataPing = { 0 };  // Do this incase Start() is called before the user sets any data
-        private byte[] txDataPong = { 0 };  // Do this incase Start() is called before the user sets any data
-        private byte[] rxDataPing = { 0 };  // Do this incase GetRxData() is called before the user gets any data
-        private byte[] rxDataPong = { 0 };  // Do this incase GetRxData() is called before the user gets any data
-        private byte rxTypePing;
-        private byte rxTypePong;
-        private bool usePing = true;
+        private byte[] _dataToSend = new byte[2048];
+        private int _sendIndex = 0;
+        private byte[] _dataReceived = new byte[0];
         private Configuration config;
         private bool clientIsBusy = false;
         private string moduleName = "SocketWrapper.cs";
-        private int numPacketsRead = 0;
+        private Object _lock = new Object();
 
         /// <summary>
         /// Version number of the current release.
         /// </summary>
-        public const string version = "1.1.1";
+        public const string version = "1.0.2.0";
         /// <summary>
         /// Instantiates a new instance of <c>SocketWrapper</c> configured as either a client or a server.
         /// </summary>
@@ -41,29 +36,21 @@ namespace VMUV_TCP_CSharp
         /// Sets the data from <c>payload</c> into the transmit data buffer.
         /// </summary>
         /// <param name="payload"></param>
-        /// <param name="type"></param>
-        public void ServerSetTxData(byte[] payload, byte type)
+        public void ServerSetTxData(byte[] payload)
         {
-            string methodName = "ServerSetTxData";
-            try
+            lock (_lock)
             {
-                if (usePing)
+                if (_sendIndex + payload.Length < 2048)
                 {
-                    txDataPing = packetizer.PacketizeData(payload, (byte)type);
-                    usePing = false;
+                    Buffer.BlockCopy(payload, 0, _dataToSend, _sendIndex, payload.Length);
+                    _sendIndex += payload.Length;
                 }
                 else
                 {
-                    txDataPong = packetizer.PacketizeData(payload, (byte)type);
-                    usePing = true;
+                    int len = 2048 - _sendIndex;
+                    Buffer.BlockCopy(payload, 0, _dataToSend, _sendIndex, len);
+                    _sendIndex += len;
                 }
-            }
-            catch (ArgumentOutOfRangeException e0)
-            {
-                string msg = e0.Message + e0.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
             }
         }
 
@@ -73,22 +60,12 @@ namespace VMUV_TCP_CSharp
         /// <returns>byte buffer with a copy of the most recently receieved valid data payload.</returns>
         public byte[] ClientGetRxData()
         {
-            if (usePing)
-                return rxDataPong;
-            else
-                return rxDataPing;
-        }
-
-        /// <summary>
-        /// Acquires the most recently received payload type.
-        /// </summary>
-        /// <returns>byte with the most recent payload type. </returns>
-        public byte ClientGetRxType()
-        {
-            if (usePing)
-                return rxTypePong;
-            else
-                return rxTypePing;
+            byte[] rtn;
+            lock (_lock)
+            {
+                rtn = _dataReceived;
+            }
+            return rtn;
         }
 
         /// <summary>
@@ -273,10 +250,10 @@ namespace VMUV_TCP_CSharp
                 Socket local = (Socket)ar.AsyncState;
                 Socket handler = listener.EndAccept(ar);
 
-                if (usePing)
-                    Send(handler, txDataPong);
-                else
-                    Send(handler, txDataPing);
+                lock (_lock)
+                {
+                    Send(handler, _dataToSend);
+                }
             }
             catch (ArgumentNullException e0)
             {
@@ -585,23 +562,11 @@ namespace VMUV_TCP_CSharp
 
                 if (numBytesRead > 0)
                 {
-                    if (state.packetizer.IsPacketValid(state.buffer))
+                    byte[] data = new byte[numBytesRead];
+                    Buffer.BlockCopy(state.buffer, 0, data, 0, numBytesRead);
+                    lock (_lock)
                     {
-                        if (usePing)
-                        {
-                            rxDataPing = state.packetizer.UnpackData(state.buffer);
-                            rxTypePing = state.packetizer.GetPacketType(state.buffer);
-                            usePing = false;
-                        }
-                        else
-                        {
-                            rxDataPong = state.packetizer.UnpackData(state.buffer);
-                            rxTypePong = state.packetizer.GetPacketType(state.buffer);
-                            usePing = true;
-                        }
-                        
-                        numPacketsRead++;
-                        DebugPrint(numPacketsRead.ToString());
+                        _dataReceived = data;
                     }
                 }
             }

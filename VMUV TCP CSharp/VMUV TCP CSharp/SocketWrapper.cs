@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security;
 using Trace_Logger_CSharp;
+using Comms_Protocol_CSharp;
 
 namespace VMUV_TCP_CSharp
 {
@@ -12,12 +13,13 @@ namespace VMUV_TCP_CSharp
         private Socket listener = null;
         private const int port = 11069;
         private byte[] _dataToSend = new byte[2048];
-        private int _sendIndex = 0;
+        private int _numBytesToSend = 0;
         private byte[] _dataReceived = new byte[0];
         private Configuration config;
         private bool clientIsBusy = false;
         private string moduleName = "SocketWrapper.cs";
         private Object _lock = new Object();
+        private DataQueue _queue = new DataQueue();
 
         /// <summary>
         /// Version number of the current release.
@@ -36,20 +38,14 @@ namespace VMUV_TCP_CSharp
         /// Sets the data from <c>payload</c> into the transmit data buffer.
         /// </summary>
         /// <param name="payload"></param>
-        public void ServerSetTxData(byte[] payload)
+        public void ServerSetTxData(DataQueue queue)
         {
             lock (_lock)
             {
-                if (_sendIndex + payload.Length < 2048)
+                while (queue.Count > 0)
                 {
-                    Buffer.BlockCopy(payload, 0, _dataToSend, _sendIndex, payload.Length);
-                    _sendIndex += payload.Length;
-                }
-                else
-                {
-                    int len = 2048 - _sendIndex;
-                    Buffer.BlockCopy(payload, 0, _dataToSend, _sendIndex, len);
-                    _sendIndex += len;
+                    if (!_queue.Add(queue.Get()))
+                        break;
                 }
             }
         }
@@ -58,13 +54,27 @@ namespace VMUV_TCP_CSharp
         /// Acquires the most recently received valid data payload.
         /// </summary>
         /// <returns>byte buffer with a copy of the most recently receieved valid data payload.</returns>
-        public byte[] ClientGetRxData()
+        public bool ClientGetRxData(DataQueue queue)
         {
-            byte[] rtn;
+            bool rtn = true;
             lock (_lock)
             {
-                rtn = _dataReceived;
+                while (_queue.Count > 0)
+                {
+                    if (!queue.Add(_queue.Get()))
+                    {
+                        rtn = false;
+                        break;
+                    }
+                }
             }
+            return rtn;
+        }
+
+        public bool ClientHasData()
+        {
+            bool rtn = false;
+            lock (_lock) { rtn = _queue.Count > 0; }
             return rtn;
         }
 
@@ -249,11 +259,7 @@ namespace VMUV_TCP_CSharp
             {
                 Socket local = (Socket)ar.AsyncState;
                 Socket handler = listener.EndAccept(ar);
-
-                lock (_lock)
-                {
-                    Send(handler, _dataToSend);
-                }
+                Send(handler);
             }
             catch (ArgumentNullException e0)
             {
@@ -306,13 +312,18 @@ namespace VMUV_TCP_CSharp
             }
         }
 
-        private void Send(Socket handler, byte[] data)
+        private void Send(Socket handler)
         {
             string methodName = "Send";
 
             try
             {
-                handler.BeginSend(data, 0, data.Length, 0, new AsyncCallback(SendCB), handler);
+                lock (_lock)
+                {
+                    _numBytesToSend = _queue.GetStreamable(_dataToSend);
+                }
+
+                handler.BeginSend(_dataToSend, 0, _numBytesToSend, 0, new AsyncCallback(SendCB), handler);
             }
             catch (ArgumentNullException e0)
             {
@@ -566,7 +577,7 @@ namespace VMUV_TCP_CSharp
                     Buffer.BlockCopy(state.buffer, 0, data, 0, numBytesRead);
                     lock (_lock)
                     {
-                        _dataReceived = data;
+                        _queue.ParseStreamable(data, data.Length);
                     }
                 }
             }

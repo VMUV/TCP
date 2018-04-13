@@ -52,7 +52,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="PacketizerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SocketWrapperTests.cs" />
   </ItemGroup>
@@ -60,6 +59,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\CommsProtocol\Comms Protocol CSharp\Comms Protocol CSharp\Comms Protocol CSharp.csproj">
+      <Project>{00f7359a-0cc6-4b03-a098-522e2eea97db}</Project>
+      <Name>Comms Protocol CSharp</Name>
+    </ProjectReference>
     <ProjectReference Include="..\VMUV TCP CSharp\VMUV TCP CSharp.csproj">
       <Project>{9e623c9a-5072-41bb-819a-7c1ba442e4a5}</Project>
       <Name>VMUV TCP CSharp</Name>

@@ -2,6 +2,7 @@
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VMUV_TCP_CSharp;
+using Comms_Protocol_CSharp;
 using Trace_Logger_CSharp;
 
 namespace VMUV_TCP_CSharp_Tests
@@ -10,43 +11,44 @@ namespace VMUV_TCP_CSharp_Tests
     public class SocketWrapperTests
     {
         [TestMethod]
-        public void SocketWrapperEndToEndTest()
+        public void SocketWrapper_TestEndToEnd()
         {
             SocketWrapper server = new SocketWrapper(Configuration.server);
             SocketWrapper client = new SocketWrapper(Configuration.client);
 
-            client.StartServer();
-            Assert.AreEqual(client.HasTraceMessages(), false);
+            DataQueue knownData = new DataQueue();
+            DataQueue toSend = new DataQueue();
+            DataQueue toRecieve = new DataQueue();
+            short[] known = new short[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+            byte[] payload = new byte[known.Length * 2];
+            Buffer.BlockCopy(known, 0, payload, 0, payload.Length);
+            Motus_1_RawDataPacket dummyPacket = new Motus_1_RawDataPacket(payload);
+            for (int i = 0; i < knownData.MaxSize; i++)
+            {
+                knownData.Add(dummyPacket);
+                toSend.Add(dummyPacket);
+            }
 
             server.StartServer();
-            Assert.AreEqual(server.HasTraceMessages(), true);
-            TraceLoggerMessage[] messages = server.GetTraceMessages();
-            Assert.AreEqual(messages.Length, 1);
-            Assert.AreEqual(messages[0].moduleName, "SocketWrapper.cs");
-            Assert.AreEqual(messages[0].methodName, "StartServer");
-            Assert.AreEqual(messages[0].message, "TCP Server successfully started on port 11069");
+            server.ServerSetTxData(toSend);
+            Assert.IsTrue(toSend.IsEmpty());
 
-            // set tx data
-            byte[] txData = new byte[] { 0x69, 0x02, 0x45, 0x89 };
-            for (int j = 0; j < 10; j++)
+            client.ClientStartRead();
+            Thread.Sleep(1000);
+            Assert.IsTrue(client.ClientHasData());
+            client.ClientGetRxData(toRecieve);
+            Assert.AreEqual(toRecieve.Count, toRecieve.MaxSize);
+            while (!toRecieve.IsEmpty())
             {
-                server.ServerSetTxData(txData, 0);
-                client.ClientStartRead();
-
-                Assert.AreEqual(false, client.HasTraceMessages());
-                Assert.AreEqual(false, server.HasTraceMessages());
-
-                Thread.Sleep(10);
-
-                byte[] rxData = client.ClientGetRxData();
-                Assert.AreEqual(txData.Length, rxData.Length);
-                byte type = client.ClientGetRxType();
-                Assert.AreEqual(0, type);
-                for (int i = 0; i < txData.Length; i++)
-                    Assert.AreEqual(txData[i], rxData[i]);
-
-                Assert.AreEqual(false, client.HasTraceMessages());
-                Assert.AreEqual(false, server.HasTraceMessages());
+                Motus_1_RawDataPacket packetKnown = new Motus_1_RawDataPacket(knownData.Get());
+                Motus_1_RawDataPacket packetTest = new Motus_1_RawDataPacket(toRecieve.Get());
+                short[] payloadKnown = packetKnown.DeSerialize();
+                short[] payloadTest = packetTest.DeSerialize();
+                for (int i = 0; i < payloadKnown.Length; i++)
+                {
+                    Assert.AreEqual(known[i], payloadKnown[i]);
+                    Assert.AreEqual(payloadKnown[i], payloadTest[i]);
+                }
             }
         }
     }

@@ -48,5 +48,11 @@
     <Compile Include="SocketWrapper.cs" />
     <Compile Include="StateObject.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\CommsProtocol\Comms Protocol CSharp\Comms Protocol CSharp\Comms Protocol CSharp.csproj">
+      <Project>{00f7359a-0cc6-4b03-a098-522e2eea97db}</Project>
+      <Name>Comms Protocol CSharp</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

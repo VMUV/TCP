@@ -21,54 +21,27 @@ namespace VMUV_TCP_CSharp
         private Object _lock = new Object();
         private DataQueue _queue = new DataQueue();
 
-        /// <summary>
-        /// Version number of the current release.
-        /// </summary>
         public const string version = "1.0.2.0";
-        /// <summary>
-        /// Instantiates a new instance of <c>SocketWrapper</c> configured as either a client or a server.
-        /// </summary>
-        /// <param name="configuration"></param>
+
         public SocketWrapper(Configuration configuration)
         {
             config = configuration;
         }
 
-        /// <summary>
-        /// Sets the data from <c>payload</c> into the transmit data buffer.
-        /// </summary>
-        /// <param name="payload"></param>
         public void ServerSetTxData(DataQueue queue)
         {
             lock (_lock)
             {
-                while (queue.Count > 0)
-                {
-                    if (!_queue.Add(queue.Get()))
-                        break;
-                }
+                _queue.TransferAll(queue);
             }
         }
 
-        /// <summary>
-        /// Acquires the most recently received valid data payload.
-        /// </summary>
-        /// <returns>byte buffer with a copy of the most recently receieved valid data payload.</returns>
-        public bool ClientGetRxData(DataQueue queue)
+        public void ClientGetRxData(DataQueue queue)
         {
-            bool rtn = true;
             lock (_lock)
             {
-                while (_queue.Count > 0)
-                {
-                    if (!queue.Add(_queue.Get()))
-                    {
-                        rtn = false;
-                        break;
-                    }
-                }
+                queue.TransferAll(_queue);
             }
-            return rtn;
         }
 
         public bool ClientHasData()
@@ -78,10 +51,6 @@ namespace VMUV_TCP_CSharp
             return rtn;
         }
 
-        /// <summary>
-        /// Call this method only once after instantiation of the <c>SocketWrapper</c> object. This will start the 
-        /// server listener for incoming connections.
-        /// </summary>
         public void StartServer()
         {
             string methodName = "StartServer";
@@ -159,9 +128,6 @@ namespace VMUV_TCP_CSharp
             }
         }
 
-        /// <summary>
-        /// Call this method in from the main thread to start the next client read process.
-        /// </summary>
         public void ClientStartRead()
         {
             string methodName = "ClientStartRead";
@@ -232,20 +198,11 @@ namespace VMUV_TCP_CSharp
             }
         }
 
-        /// <summary>
-        /// Returns all stored trace messages within the <c>TraceLogger</c> object. Call this method after first determining if the 
-        /// <c>TraceLogger</c> object has any stored messages using the <c>HasTraceMessages</c> method.
-        /// </summary>
-        /// <returns>A list of <c>TraceLoggerMessage</c> elements.</returns>
         public TraceLoggerMessage[] GetTraceMessages()
         {
             return traceLogger.GetAllMessages();
         }
 
-        /// <summary>
-        /// Returns true if there are unread messages stored in the <c>TraceLogger</c> object.
-        /// </summary>
-        /// <returns>True if unread messages are available. False otherwise.</returns>
         public bool HasTraceMessages()
         {
             return traceLogger.HasMessages();
@@ -635,9 +592,6 @@ namespace VMUV_TCP_CSharp
         }
     }
 
-    /// <summary>
-    /// The possible configurations of the <c>SocketWrapper</c> instance.
-    /// </summary>
     public enum Configuration
     {
         server,

@@ -3,7 +3,6 @@ using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VMUV_TCP_CSharp;
 using Comms_Protocol_CSharp;
-using Trace_Logger_CSharp;
 
 namespace VMUV_TCP_CSharp_Tests
 {

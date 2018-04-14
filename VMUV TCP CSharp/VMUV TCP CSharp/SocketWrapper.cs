@@ -21,7 +21,7 @@ namespace VMUV_TCP_CSharp
         private Object _lock = new Object();
         private DataQueue _queue = new DataQueue();
 
-        public const string version = "1.0.2.0";
+        public const string version = "1.0.0.2";
 
         public SocketWrapper(Configuration configuration)
         {

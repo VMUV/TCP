@@ -9,7 +9,6 @@ namespace VMUV_TCP_CSharp
 {
     public class SocketWrapper
     {
-        private TraceLogger traceLogger = new TraceLogger();
         private Socket listener = null;
         private const int port = 11069;
         private byte[] _dataToSend = new byte[2048];
@@ -17,11 +16,10 @@ namespace VMUV_TCP_CSharp
         private byte[] _dataReceived = new byte[0];
         private Configuration config;
         private bool clientIsBusy = false;
-        private string moduleName = "SocketWrapper.cs";
         private Object _lock = new Object();
         private DataQueue _queue = new DataQueue();
 
-        public const string version = "1.0.0.2";
+        public const string version = "1.0.0.3";
 
         public SocketWrapper(Configuration configuration)
         {
@@ -53,8 +51,6 @@ namespace VMUV_TCP_CSharp
 
         public void StartServer()
         {
-            string methodName = "StartServer";
-
             if (config != Configuration.server)
                 return;
 
@@ -68,63 +64,47 @@ namespace VMUV_TCP_CSharp
                 listener.Listen(100);
                 listener.BeginAccept(new AsyncCallback(AcceptCB), listener);
 
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
+                LogMessage(msg);
             }
             catch (ArgumentNullException e0)
             {
                 string msg = e0.Message + e0.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ArgumentOutOfRangeException e1)
             {
                 string msg = e1.Message + e1.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SecurityException e4)
             {
                 string msg = e4.Message + e4.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (NotSupportedException e5)
             {
                 string msg = e5.Message + e5.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (InvalidOperationException e6)
             {
                 string msg = e6.Message + e6.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e7)
             {
                 string msg = e7.Message + e7.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
         }
 
@@ -146,51 +126,37 @@ namespace VMUV_TCP_CSharp
             catch (ArgumentNullException e0)
             {
                 string msg = e0.Message + e0.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ArgumentOutOfRangeException e1)
             {
                 string msg = e1.Message + e1.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SecurityException e4)
             {
                 string msg = e4.Message + e4.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (InvalidOperationException e6)
             {
                 string msg = e6.Message + e6.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e7)
             {
                 string msg = e7.Message + e7.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             finally
             {
@@ -198,20 +164,8 @@ namespace VMUV_TCP_CSharp
             }
         }
 
-        public TraceLoggerMessage[] GetTraceMessages()
-        {
-            return traceLogger.GetAllMessages();
-        }
-
-        public bool HasTraceMessages()
-        {
-            return traceLogger.HasMessages();
-        }
-
         private void AcceptCB(IAsyncResult ar)
         {
-            string methodName = "AcceptCB";
-
             try
             {
                 Socket local = (Socket)ar.AsyncState;
@@ -221,58 +175,42 @@ namespace VMUV_TCP_CSharp
             catch (ArgumentNullException e0)
             {
                 string msg = e0.Message + e0.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ArgumentOutOfRangeException e1)
             {
                 string msg = e1.Message + e1.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (NotSupportedException e5)
             {
                 string msg = e5.Message + e5.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (InvalidOperationException e6)
             {
                 string msg = e6.Message + e6.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e7)
             {
                 string msg = e7.Message + e7.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
         }
 
         private void Send(Socket handler)
         {
-            string methodName = "Send";
-
             try
             {
                 lock (_lock)
@@ -285,44 +223,32 @@ namespace VMUV_TCP_CSharp
             catch (ArgumentNullException e0)
             {
                 string msg = e0.Message + e0.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ArgumentOutOfRangeException e1)
             {
                 string msg = e1.Message + e1.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e4)
             {
                 string msg = e4.Message + e4.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
         }
 
         private void SendCB(IAsyncResult ar)
         {
-            string methodName = "SendCB";
-
             try
             {
                 Socket handler = (Socket)ar.AsyncState;
@@ -334,23 +260,17 @@ namespace VMUV_TCP_CSharp
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e4)
             {
                 string msg = e4.Message + e4.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
 
             ResetServer();
@@ -358,8 +278,6 @@ namespace VMUV_TCP_CSharp
 
         private void ResetServer()
         {
-            string methodName = "ResetServer";
-
             try
             {
                 listener.Listen(100);
@@ -368,50 +286,37 @@ namespace VMUV_TCP_CSharp
             catch (ArgumentOutOfRangeException e1)
             {
                 string msg = e1.Message + e1.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (NotSupportedException e5)
             {
                 string msg = e5.Message + e5.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (InvalidOperationException e6)
             {
                 string msg = e6.Message + e6.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e7)
             {
                 string msg = e7.Message + e7.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
         }
 
         private void ConnectCB(IAsyncResult ar)
         {
-            string methodName = "ConnectCB";
             try
             {
                 Socket client = (Socket)ar.AsyncState;
@@ -422,44 +327,32 @@ namespace VMUV_TCP_CSharp
             catch (ArgumentNullException e1)
             {
                 string msg = e1.Message + e1.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ArgumentException e5)
             {
                 string msg = e5.Message + e5.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (InvalidOperationException e6)
             {
                 string msg = e6.Message + e6.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e7)
             {
                 string msg = e7.Message + e7.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             finally
             {
@@ -470,7 +363,6 @@ namespace VMUV_TCP_CSharp
         private void Read(Socket client)
         {
             StateObject state = new StateObject();
-            string methodName = "Read";
 
             try
             {
@@ -480,37 +372,27 @@ namespace VMUV_TCP_CSharp
             catch (ArgumentNullException e1)
             {
                 string msg = e1.Message + e1.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ArgumentOutOfRangeException e5)
             {
                 string msg = e5.Message + e5.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e7)
             {
                 string msg = e7.Message + e7.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             finally
             {
@@ -520,8 +402,6 @@ namespace VMUV_TCP_CSharp
 
         private void ReadCB(IAsyncResult ar)
         {
-            string methodName = "ReadCB";
-
             try
             {
                 StateObject state = (StateObject)ar.AsyncState;
@@ -541,54 +421,40 @@ namespace VMUV_TCP_CSharp
             catch (ArgumentNullException e1)
             {
                 string msg = e1.Message + e1.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (SocketException e2)
             {
                 string msg = e2.Message + e2.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ObjectDisposedException e3)
             {
                 string msg = e3.Message + e3.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (ArgumentException e5)
             {
                 string msg = e5.Message + e5.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (InvalidOperationException e6)
             {
                 string msg = e6.Message + e6.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
             catch (Exception e7)
             {
                 string msg = e7.Message + e7.StackTrace;
-
-                traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
-                DebugPrint(msg);
+                LogMessage(msg);
             }
 
             clientIsBusy = false;
         }
 
-        private void DebugPrint(string s)
+        private void LogMessage(string msg)
         {
-#if DEBUG
-            Console.WriteLine(s);
-#endif
+            lock (_lock) { Logger.LogMessage(msg); }
         }
     }
 

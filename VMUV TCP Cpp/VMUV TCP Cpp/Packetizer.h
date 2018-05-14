@@ -6,6 +6,7 @@
 
 using namespace std;
 
+typedef unsigned char byte;
 #define Int16MaxValue 32767
 #define ShortMaxValue 32767
 
@@ -72,25 +73,25 @@ namespace VMUV_TCP_Cpp
 		Packetizer();
 		virtual ~Packetizer();
 
-		const char sync1 = 0x69;
-		const char sync2 = 0xee;
+		const byte sync1 = 0x69;
+		const byte sync2 = 0xee;
 		const int numOverHeadBytes = 7;
-		const char sycn1Loc = 0x00;
-		const char sycn2Loc = 0x01;
-		const char typeLoc = 0x02;
-		const char lenMSBLoc = 0x03;
-		const char lenLSBLoc = 0x04;
-		const char dataStartLoc = 0x05;
+		const byte sycn1Loc = 0x00;
+		const byte sycn2Loc = 0x01;
+		const byte typeLoc = 0x02;
+		const byte lenMSBLoc = 0x03;
+		const byte lenLSBLoc = 0x04;
+		const byte dataStartLoc = 0x05;
 
 	protected:
-		void BuildHeader(vector<char> &packet, char type, short len);
-		short CalculateCheckSumFromPayload(vector<char> payload, short len);
+		void BuildHeader(vector<byte> &packet, byte type, short len);
+		short CalculateCheckSumFromPayload(vector<byte> payload, short len);
 
 	public:
-		vector<char> PacketizeData(vector<char> payload, char type) throw(ArgumentOutOfRangeException);
-		bool IsPacketValid(vector<char> packet);
-		char GetPacketType(vector<char> packet)  throw(ArgumentException);
-		vector<char> UnpackData(vector<char> packet) throw(ArgumentException);
+		vector<byte> PacketizeData(vector<byte> payload, byte type);
+		bool IsPacketValid(vector<byte> packet);
+		byte GetPacketType(vector<byte> packet);
+		vector<byte> UnpackData(vector<byte> packet);
 	};
 
 }

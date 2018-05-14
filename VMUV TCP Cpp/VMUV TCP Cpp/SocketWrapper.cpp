@@ -51,19 +51,19 @@ VMUV_TCP_Cpp::SocketWrapper::~SocketWrapper()
 /// </summary>
 /// <param name="payload"></param>
 /// <param name="type"></param>
-void VMUV_TCP_Cpp::SocketWrapper::ServerSetTxData(vector<char> payload, char type)
+void VMUV_TCP_Cpp::SocketWrapper::ServerSetTxData(vector<byte> payload, byte type)
 {
 	string methodName = "ServerSetTxData";
 	try
 	{
 		if (usePing)
 		{
-			txDataPing = packetizer.PacketizeData(payload, (char)type);
+			txDataPing = packetizer.PacketizeData(payload, (byte)type);
 			usePing = false;
 		}
 		else
 		{
-			txDataPong = packetizer.PacketizeData(payload, (char)type);
+			txDataPong = packetizer.PacketizeData(payload, (byte)type);
 			usePing = true;
 		}
 	}
@@ -79,8 +79,8 @@ void VMUV_TCP_Cpp::SocketWrapper::ServerSetTxData(vector<char> payload, char typ
 /// <summary>
 /// Acquires the most recently received valid data payload.
 /// </summary>
-/// <returns>char buffer with a copy of the most recently receieved valid data payload.</returns>
-vector<char> VMUV_TCP_Cpp::SocketWrapper::ClientGetRxData()
+/// <returns>byte buffer with a copy of the most recently receieved valid data payload.</returns>
+vector<byte> VMUV_TCP_Cpp::SocketWrapper::ClientGetRxData()
 {
 	if (usePing)
 		return rxDataPong;
@@ -91,8 +91,8 @@ vector<char> VMUV_TCP_Cpp::SocketWrapper::ClientGetRxData()
 /// <summary>
 /// Acquires the most recently received payload type.
 /// </summary>
-/// <returns>char with the most recent payload type. </returns>
-char VMUV_TCP_Cpp::SocketWrapper::ClientGetRxType()
+/// <returns>byte with the most recent payload type. </returns>
+byte VMUV_TCP_Cpp::SocketWrapper::ClientGetRxType()
 {
 	if (usePing)
 		return rxTypePong;
@@ -106,6 +106,7 @@ char VMUV_TCP_Cpp::SocketWrapper::ClientGetRxType()
 /// </summary>
 void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 {
+	printf("StartServer()\n");
 	//-------------------------
 	// Declare and initialize variables
 	string methodName = "StartServer";
@@ -144,6 +145,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 		hints.ai_flags = AI_PASSIVE;
 
 		// Resolve the local address and port to be used by the server
+		printf("calling getaddrinfo()\n");
 		iResult = getaddrinfo(NULL, portstr, &hints, &result);
 		if (iResult != 0) {
 			sprintf_s(tmpstr, "getaddrinfo failed: %d\n", iResult);
@@ -155,6 +157,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 
 		//-------------------------
 		// Create a listening socket
+		printf("calling socket()\n");
 		ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 
 		if (ListenSocket == INVALID_SOCKET) {
@@ -167,6 +170,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 		//-------------------------
 		// Bind the listening socket
 		// Setup the TCP listening socket
+		printf("calling bind()\n");
 		iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
 		if (iResult == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "bind failed with error: %d\n", WSAGetLastError());
@@ -179,6 +183,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 
 		//-------------------------
 		// Start listening on the socket
+		printf("calling listen()\n");
 		if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
 			sprintf_s(tmpstr, "Listen failed with error: %ld\n", WSAGetLastError());
 			closesocket(ListenSocket);
@@ -187,6 +192,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 		}
 
 		// Accept a handler socket
+		printf("calling accept()\n");
 		ClientSocket = accept(ListenSocket, NULL, NULL);
 		if (ClientSocket == INVALID_SOCKET) {
 			sprintf_s(tmpstr, "accept failed: %d\n", WSAGetLastError());
@@ -198,6 +204,7 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 //		AcceptCB(handler);
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
+		printf("StartServer done\n");
 	}
 	catch (ArgumentNullException &e0)
 	{
@@ -258,20 +265,42 @@ void VMUV_TCP_Cpp::SocketWrapper::StartServer()
 }
 
 
-void VMUV_TCP_Cpp::SocketWrapper::ContinueServer()
+int VMUV_TCP_Cpp::SocketWrapper::ContinueServer()
 {
-	int iResult;
-	int iSendResult;
+	printf("ContinueServer()\n");
+	int iResult = 0;
 
 	// No longer need server socket
 	printf("about to invoke closesocket(ListenSocket)\n");
 	closesocket(ListenSocket);
 
-	AcceptCB(ClientSocket);
+	iResult = AcceptCB(ClientSocket);
 
 	//// cleanup
+	SendCB(ClientSocket); // closes the socket
 	WSACleanup();
 	printf("ContinueServer Done\n");
+	return iResult;
+}
+// breakdown of ContinueServer for motus emulation
+void VMUV_TCP_Cpp::SocketWrapper::ServerCloseListenSocket()
+{
+	// No longer need server socket
+	printf("about to invoke closesocket(ListenSocket)\n");
+	closesocket(ListenSocket);
+}
+int VMUV_TCP_Cpp::SocketWrapper::ServerAcceptCBClientSocket()
+{
+	printf("ServerAcceptCBClientSocket()\n");
+	int iResult = 0;
+	iResult = AcceptCB(ClientSocket);
+	return iResult;
+}
+void VMUV_TCP_Cpp::SocketWrapper::ServerCleanup()
+{
+	SendCB(ClientSocket); // closes the socket
+	WSACleanup();
+	printf("ServerCleanup Done\n");
 }
 
 /// <summary>
@@ -416,8 +445,6 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientStartRead()
 
 void VMUV_TCP_Cpp::SocketWrapper::ClientContinueRead()
 {
-	int iResult;
-
 	printf("about to invoke recv()\n");
 	Read(ConnectSocket);
 
@@ -425,6 +452,18 @@ void VMUV_TCP_Cpp::SocketWrapper::ClientContinueRead()
 	closesocket(ConnectSocket);
 	WSACleanup();
 	printf("ClientContinueRead Done\n");
+}
+void VMUV_TCP_Cpp::SocketWrapper::ClientRead()
+{
+	printf("about to invoke recv()\n");
+	Read(ConnectSocket);
+}
+void VMUV_TCP_Cpp::SocketWrapper::ClientCleanup()
+{
+	// cleanup
+	closesocket(ConnectSocket);
+	WSACleanup();
+	printf("ClientCleanup Done\n");
 }
 
 /// <summary>
@@ -446,16 +485,19 @@ bool VMUV_TCP_Cpp::SocketWrapper::HasTraceMessages()
 	return traceLogger.HasMessages();
 }
 
-void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
+// returns 0 if no errors - else returns SOCKET_ERROR
+int VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 {
+	printf("AcceptCB()\n");
+	int iResult = 0;
 	string methodName = "AcceptCB";
 
 	try
 	{
 		if (usePing)
-			Send(handler, txDataPong);
+			iResult = Send(handler, txDataPong);
 		else
-			Send(handler, txDataPing);
+			iResult = Send(handler, txDataPing);
 	}
 	catch (ArgumentNullException &e0)
 	{
@@ -463,6 +505,7 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (ArgumentOutOfRangeException &e1)
 	{
@@ -470,6 +513,7 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (SocketException &e2)
 	{
@@ -477,6 +521,7 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (ObjectDisposedException &e3)
 	{
@@ -484,6 +529,7 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (NotSupportedException &e5)
 	{
@@ -491,6 +537,7 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (InvalidOperationException &e6)
 	{
@@ -498,6 +545,7 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (Exception &e7)
 	{
@@ -505,11 +553,16 @@ void VMUV_TCP_Cpp::SocketWrapper::AcceptCB(SOCKET handler)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
+	return iResult;
 }
 
-void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
+// returns 0 if no errors - else returns SOCKET_ERROR
+int VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<byte> data)
 {
+	printf("Send()\n");
+	int iResult = 0;
 	string methodName = "Send";
 	char tmpstr[100];
 
@@ -523,15 +576,16 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 	try
 	{
 		// Send to server.
-		int iResult = send(handler, &data[0], data.size(), 0);
-		if (iResult == SOCKET_ERROR) {
+		int sendResult = send(handler, (char*)&data[0], data.size(), 0);
+		if (sendResult == SOCKET_ERROR) {
+			iResult = sendResult;
 			sprintf_s(tmpstr, "send failed with error: %d\n", WSAGetLastError());
 			closesocket(handler);
 			WSACleanup();
 			throw SocketException("winsock ", tmpstr);
 		}
-		printf("Bytes Sent: %ld\n", iResult);
-		SendCB(handler);
+		printf("Bytes Sent: %d\n", sendResult);
+//		SendCB(handler);
 	}
 	catch (ArgumentNullException &e0)
 	{
@@ -539,6 +593,7 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (ArgumentOutOfRangeException &e1)
 	{
@@ -546,6 +601,7 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (SocketException &e2)
 	{
@@ -553,6 +609,7 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (ObjectDisposedException &e3)
 	{
@@ -560,6 +617,7 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
 	catch (Exception &e4)
 	{
@@ -567,11 +625,14 @@ void VMUV_TCP_Cpp::SocketWrapper::Send(SOCKET handler, vector<char> data)
 
 		traceLogger.QueueMessage(traceLogger.BuildMessage(moduleName, methodName, msg));
 		DebugPrint(msg);
+		iResult = SOCKET_ERROR;
 	}
+	return iResult;
 }
 
 void VMUV_TCP_Cpp::SocketWrapper::SendCB(SOCKET handler)
 {
+	printf("SendCB()\n");
 	string methodName = "SendCB";
 	char tmpstr[100];
 
@@ -756,7 +817,7 @@ void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET ConnectSocket)
 	try
 	{
 		state.workSocket = ConnectSocket;
-		int iResult = recv(ConnectSocket, &(state.buffer[0]), state.BufferSize, 0);
+		int iResult = recv(ConnectSocket, (char*)&(state.buffer[0]), state.BufferSize, 0);
 		if (iResult < 0) {
 			sprintf_s(tmpstr, "recv failed with error: %d\n", WSAGetLastError());
 			closesocket(ConnectSocket);
@@ -764,7 +825,6 @@ void VMUV_TCP_Cpp::SocketWrapper::Read(SOCKET ConnectSocket)
 			throw SocketException("winsock ", tmpstr);
 		}
 		else if (iResult > 0) {
-			printf("Bytes received: %d\n", iResult);
 			sprintf_s(tmpstr, "Bytes received: %d\n", iResult);
 			string msg = tmpstr;
 			DebugPrint(msg);
@@ -898,6 +958,7 @@ void VMUV_TCP_Cpp::SocketWrapper::DebugPrint(string s)
 #if DEBUG
 	Console.WriteLine(s);
 #endif
+	printf("%s\n", s.c_str());
 }
 
 //--------------------------------------------------------------------

@@ -15,9 +15,9 @@ namespace VMUV_TCP_CppTests
 		TEST_METHOD(ServerSetTxDataTest)
 		{
 			SocketWrapper testServer(server);
-			vector<char> payload(21);
-			strcpy(&payload[0], "this is a test - 123");
-			char type = 0x12;
+			vector<byte> payload(21);
+			strcpy((char*)&payload[0], "this is a test - 123");
+			byte type = 0x12;
 
 			testServer.ServerSetTxData(payload, type);
 			// need to access private member usePing, txDataPing, txDataPong to verify this function
@@ -26,7 +26,7 @@ namespace VMUV_TCP_CppTests
 		TEST_METHOD(ClientGetRxDataTest)
 		{
 			SocketWrapper testServer(client);
-			vector<char> payload;
+			vector<byte> payload;
 			payload = testServer.ClientGetRxData();
 			// need to access private members usePing, rxDataPing, rxDataPong to verify this function
 		}
@@ -34,7 +34,7 @@ namespace VMUV_TCP_CppTests
 		TEST_METHOD(ClientGetRxTypeTest)
 		{
 			SocketWrapper testServer(client);
-			char type = testServer.ClientGetRxType();
+			byte type = testServer.ClientGetRxType();
 			// need to access private members usePing, rxTypePing, rxTypePong to verify this function
 		}
 
@@ -71,11 +71,11 @@ namespace VMUV_TCP_CppTests
 //			Sleep(100);
 
 			// set tx data
-			vector<char> txData(4);
-			txData[0] = (char)0x69;
-			txData[1] = (char)0x02;
-			txData[2] = (char)0x45;
-			txData[3] = (char)0x89;
+			vector<byte> txData(4);
+			txData[0] = (byte)0x69;
+			txData[1] = (byte)0x02;
+			txData[2] = (byte)0x45;
+			txData[3] = (byte)0x89;
 
 			testClient.ClientStartRead();
 			testClient.ClientContinueRead();
@@ -88,9 +88,9 @@ namespace VMUV_TCP_CppTests
 //			CloseHandle(pi.hThread);
 
 			Assert::AreEqual(testClient.HasTraceMessages(), false);
-			vector<char> rxData = testClient.ClientGetRxData();
+			vector<byte> rxData = testClient.ClientGetRxData();
 			Assert::AreEqual(txData.size() != rxData.size(), false);
-			char type = testClient.ClientGetRxType();
+			byte type = testClient.ClientGetRxType();
 			Assert::AreEqual(type != 0, false);
 			for (int i = 0; i < txData.size(); i++) {
 				Assert::AreEqual(txData[i] != rxData[i], false);

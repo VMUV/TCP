@@ -11,15 +11,15 @@ namespace VMUV_TCP_CSharp
     {
         private Socket listener = null;
         private const int port = 11069;
-        private byte[] _dataToSend = new byte[2048];
+        private byte[] _dataToSend = new byte[16535];
         private int _numBytesToSend = 0;
         private byte[] _dataReceived = new byte[0];
         private Configuration config;
         private bool clientIsBusy = false;
         private Object _lock = new Object();
-        private DataQueue _queue = new DataQueue();
+        private DataQueue _queue = new DataQueue(2048);
 
-        public const string version = "1.0.0.3";
+        public const string version = "1.0.0.4";
 
         public SocketWrapper(Configuration configuration)
         {
